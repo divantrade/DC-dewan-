@@ -332,94 +332,122 @@ function refreshCashBankDropdown() {
 /**
  * تحديث dropdown اسم الطرف ديناميكياً حسب نوع الطرف
  * يُستدعى من onEdit عند تغيير Party Type
+ *
+ * ✅ محدّث: منع تكرار الاسم + إصلاح قراءة البيانات
  */
 function updatePartyNameDropdown(ss, sheet, row, partyType) {
   let partyList = [];
-  
+
+  /**
+   * دالة مساعدة لتنسيق الاسم بدون تكرار
+   * إذا الاسم العربي فارغ أو = الاسم الإنجليزي → نعرض الإنجليزي فقط
+   */
+  function formatPartyName(nameEN, nameAR) {
+    if (nameAR && nameAR.trim() !== '' && nameAR.trim() !== nameEN.trim()) {
+      return nameEN + ' (' + nameAR + ')';
+    }
+    return nameEN;
+  }
+
   // ===== Client =====
   if (partyType.includes('Client') || partyType.includes('عميل')) {
     const clientsSheet = ss.getSheetByName('Clients');
-    if (clientsSheet && clientsSheet.getLastRow() > 1) {
-      const data = clientsSheet.getRange(2, 1, clientsSheet.getLastRow() - 1, 16).getValues();
-      data.forEach(r => {
-        const nameEN = r[1];  // B
-        const nameAR = r[2];  // C
-        const status = r[15]; // P
-        
-        if (nameEN && status === 'Active') {
-          partyList.push(nameEN + ' (' + (nameAR || nameEN) + ')');
+    if (clientsSheet) {
+      const lastRow = clientsSheet.getLastRow();
+      if (lastRow >= 2) {
+        const data = clientsSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          const nameEN = data[i][1];  // B - Company Name (EN)
+          const nameAR = data[i][2];  // C - Company Name (AR)
+          const status = data[i][15]; // P - Status
+
+          if (nameEN && status === 'Active') {
+            partyList.push(formatPartyName(nameEN, nameAR));
+          }
         }
-      });
+      }
     }
   }
-  
+
   // ===== Vendor =====
   else if (partyType.includes('Vendor') || partyType.includes('مورد')) {
     const vendorsSheet = ss.getSheetByName('Vendors');
-    if (vendorsSheet && vendorsSheet.getLastRow() > 1) {
-      const data = vendorsSheet.getRange(2, 1, vendorsSheet.getLastRow() - 1, 16).getValues();
-      data.forEach(r => {
-        const nameEN = r[1];  // B
-        const nameAR = r[2];  // C
-        const status = r[15]; // P
-        
-        if (nameEN && status === 'Active') {
-          partyList.push(nameEN + ' (' + (nameAR || nameEN) + ')');
+    if (vendorsSheet) {
+      const lastRow = vendorsSheet.getLastRow();
+      if (lastRow >= 2) {
+        const data = vendorsSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          const nameEN = data[i][1];  // B - Vendor Name (EN)
+          const nameAR = data[i][2];  // C - Vendor Name (AR)
+          const status = data[i][15]; // P - Status
+
+          if (nameEN && status === 'Active') {
+            partyList.push(formatPartyName(nameEN, nameAR));
+          }
         }
-      });
+      }
     }
   }
-  
+
   // ===== Employee =====
   else if (partyType.includes('Employee') || partyType.includes('موظف')) {
     const employeesSheet = ss.getSheetByName('Employees');
-    if (employeesSheet && employeesSheet.getLastRow() > 1) {
-      const data = employeesSheet.getRange(2, 1, employeesSheet.getLastRow() - 1, 15).getValues();
-      data.forEach(r => {
-        const nameEN = r[1];  // B
-        const nameAR = r[2];  // C
-        const status = r[14]; // O
-        
-        if (nameEN && status === 'Active') {
-          partyList.push(nameEN + ' (' + (nameAR || nameEN) + ')');
+    if (employeesSheet) {
+      const lastRow = employeesSheet.getLastRow();
+      if (lastRow >= 2) {
+        const data = employeesSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          const nameEN = data[i][1];  // B - Full Name (EN)
+          const nameAR = data[i][2];  // C - Full Name (AR)
+          const status = data[i][14]; // O - Status
+
+          if (nameEN && status === 'Active') {
+            partyList.push(formatPartyName(nameEN, nameAR));
+          }
         }
-      });
+      }
     }
   }
-  
+
   // ===== Internal (Cash/Bank) =====
   else if (partyType.includes('Internal') || partyType.includes('داخلي')) {
     // Cash Boxes
     const cashSheet = ss.getSheetByName('Cash Boxes');
-    if (cashSheet && cashSheet.getLastRow() > 1) {
-      const data = cashSheet.getRange(2, 2, cashSheet.getLastRow() - 1, 7).getValues();
-      data.forEach(r => {
-        const name = r[0];
-        const currency = r[1];
-        const status = r[6];
-        
-        if (name && status === 'Active') {
-          partyList.push('💰 ' + name + ' (' + currency + ')');
+    if (cashSheet) {
+      const lastRow = cashSheet.getLastRow();
+      if (lastRow >= 2) {
+        const data = cashSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          const name = data[i][1];     // B - Cash Name
+          const currency = data[i][2]; // C - Currency
+          const status = data[i][7];   // H - Status
+
+          if (name && status === 'Active') {
+            partyList.push('💰 ' + name + ' (' + currency + ')');
+          }
         }
-      });
+      }
     }
-    
+
     // Bank Accounts
     const bankSheet = ss.getSheetByName('Bank Accounts');
-    if (bankSheet && bankSheet.getLastRow() > 1) {
-      const data = bankSheet.getRange(2, 2, bankSheet.getLastRow() - 1, 10).getValues();
-      data.forEach(r => {
-        const name = r[0];
-        const currency = r[2];
-        const status = r[9];
-        
-        if (name && status === 'Active') {
-          partyList.push('🏦 ' + name + ' (' + currency + ')');
+    if (bankSheet) {
+      const lastRow = bankSheet.getLastRow();
+      if (lastRow >= 2) {
+        const data = bankSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          const name = data[i][1];     // B - Account Name
+          const currency = data[i][3]; // D - Currency
+          const status = data[i][10];  // K - Status
+
+          if (name && status === 'Active') {
+            partyList.push('🏦 ' + name + ' (' + currency + ')');
+          }
         }
-      });
+      }
     }
   }
-  
+
   // تطبيق الـ dropdown على الخلية المحددة
   if (partyList.length > 0) {
     const rule = SpreadsheetApp.newDataValidation()
@@ -428,6 +456,7 @@ function updatePartyNameDropdown(ss, sheet, row, partyType) {
       .build();
     sheet.getRange(row, 9).setDataValidation(rule);
   } else {
+    // إذا لم توجد بيانات، نمسح الـ validation ونضع رسالة
     sheet.getRange(row, 9).clearDataValidations();
   }
 }
@@ -504,49 +533,55 @@ function onEdit(e) {
       const clientsSheet = ss.getSheetByName('Clients');
       if (clientsSheet && clientsSheet.getLastRow() > 1) {
         const clientData = clientsSheet.getDataRange().getValues();
-        
+
         for (let i = 1; i < clientData.length; i++) {
           if (clientData[i][0] === value) { // Code match (Column A)
             const nameEN = clientData[i][1]; // Column B
             const nameAR = clientData[i][2]; // Column C
-            
+
             // Fill Client Name
             sheet.getRange(row, 6).setValue(nameEN);
-            
+
             // Fill Party Type
             sheet.getRange(row, 10).setValue('Client (عميل)');
-            
-            // Fill Party Name
-            sheet.getRange(row, 9).setValue(nameEN + ' (' + (nameAR || nameEN) + ')');
-            
+
+            // Fill Party Name - ✅ محدّث: بدون تكرار الاسم
+            const partyName = (nameAR && nameAR.trim() !== '' && nameAR.trim() !== nameEN.trim())
+              ? nameEN + ' (' + nameAR + ')'
+              : nameEN;
+            sheet.getRange(row, 9).setValue(partyName);
+
             break;
           }
         }
       }
     }
-    
+
     // ───── Client Name (F, col 6) → Fill Client Code (E) ─────
     if (col === 6 && value) {
       const clientsSheet = ss.getSheetByName('Clients');
       if (clientsSheet && clientsSheet.getLastRow() > 1) {
         const clientData = clientsSheet.getDataRange().getValues();
-        
+
         for (let i = 1; i < clientData.length; i++) {
           const code = clientData[i][0];   // A
           const nameEN = clientData[i][1]; // B
           const nameAR = clientData[i][2]; // C
           const nameTR = clientData[i][3]; // D
-          
+
           // Check if name matches EN, AR, or TR
           if (nameEN === value || nameAR === value || nameTR === value) {
             // Fill Client Code
             sheet.getRange(row, 5).setValue(code);
-            
+
             // Fill Party Type
             sheet.getRange(row, 10).setValue('Client (عميل)');
-            
-            // Fill Party Name
-            sheet.getRange(row, 9).setValue(nameEN + ' (' + (nameAR || nameEN) + ')');
+
+            // Fill Party Name - ✅ محدّث: بدون تكرار الاسم
+            const partyName = (nameAR && nameAR.trim() !== '' && nameAR.trim() !== nameEN.trim())
+              ? nameEN + ' (' + nameAR + ')'
+              : nameEN;
+            sheet.getRange(row, 9).setValue(partyName);
             
             break;
           }
