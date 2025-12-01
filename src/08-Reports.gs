@@ -249,33 +249,35 @@ function refreshDashboard() {
 }
 
 // ==================== 3. CLIENT STATEMENT ====================
+/**
+ * ✅ محدّث: إدخال كود العميل مباشرة بدون قائمة
+ */
 function showClientStatement() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  
-  const clients = getActiveClients();
-  if (clients.length === 0) {
-    ui.alert('⚠️ No active clients found!');
-    return;
-  }
-  
-  // Select client
-  const clientList = clients.map((c, i) => (i + 1) + '. ' + c.nameEN + ' (' + c.nameAR + ')').join('\n');
+
+  // طلب كود العميل مباشرة
   const response = ui.prompt(
-    '📄 Client Statement (كشف حساب)\n\n' + clientList,
-    'Enter client number:',
+    '📄 Client Statement (كشف حساب عميل)',
+    'أدخل كود العميل (Client Code):\n\nمثال: CLT-001',
     ui.ButtonSet.OK_CANCEL
   );
-  
+
   if (response.getSelectedButton() !== ui.Button.OK) return;
-  
-  const index = parseInt(response.getResponseText()) - 1;
-  if (isNaN(index) || index < 0 || index >= clients.length) {
-    ui.alert('⚠️ Invalid selection!');
+
+  const clientCode = response.getResponseText().trim();
+  if (!clientCode) {
+    ui.alert('⚠️ يرجى إدخال كود العميل!');
     return;
   }
-  
-  const client = clients[index];
+
+  // البحث عن العميل بالكود
+  const client = getClientData(clientCode);
+  if (!client) {
+    ui.alert('⚠️ لم يتم العثور على عميل بهذا الكود!\n\nClient Code: ' + clientCode);
+    return;
+  }
+
   generateClientStatement(client.code, client.nameEN);
 }
 
@@ -402,33 +404,35 @@ function exportClientStatement(clientCode, clientName, transactions) {
 }
 
 // ==================== 4. CLIENT PROFITABILITY ====================
+/**
+ * ✅ محدّث: إدخال كود العميل مباشرة بدون قائمة
+ */
 function showClientProfitability() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  
-  const clients = getActiveClients();
-  if (clients.length === 0) {
-    ui.alert('⚠️ No active clients found!');
-    return;
-  }
-  
-  // Select client
-  const clientList = clients.map((c, i) => (i + 1) + '. ' + c.nameEN).join('\n');
+
+  // طلب كود العميل مباشرة
   const response = ui.prompt(
-    '💹 Client Profitability (ربحية العميل)\n\n' + clientList,
-    'Enter client number:',
+    '💹 Client Profitability (ربحية العميل)',
+    'أدخل كود العميل (Client Code):\n\nمثال: CLT-001',
     ui.ButtonSet.OK_CANCEL
   );
-  
+
   if (response.getSelectedButton() !== ui.Button.OK) return;
-  
-  const index = parseInt(response.getResponseText()) - 1;
-  if (isNaN(index) || index < 0 || index >= clients.length) {
-    ui.alert('⚠️ Invalid selection!');
+
+  const clientCode = response.getResponseText().trim();
+  if (!clientCode) {
+    ui.alert('⚠️ يرجى إدخال كود العميل!');
     return;
   }
-  
-  const client = clients[index];
+
+  // البحث عن العميل بالكود
+  const client = getClientData(clientCode);
+  if (!client) {
+    ui.alert('⚠️ لم يتم العثور على عميل بهذا الكود!\n\nClient Code: ' + clientCode);
+    return;
+  }
+
   generateClientProfitability(client.code, client.nameEN);
 }
 
