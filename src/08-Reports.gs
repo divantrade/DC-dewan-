@@ -329,7 +329,7 @@ function generateClientStatement(clientCode, clientName) {
       if (credit > 0 || debit > 0) {
         clientTrans.push({
           date: transData[i][1],
-          description: item || description || movementType,
+          description: description || item || movementType, // Description first
           credit: credit,
           debit: debit
         });
@@ -475,21 +475,15 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   // CLIENT INFO SECTION - معلومات العميل
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Get client details
-  const client = getClientData(clientCode);
-
-  // Row 9-11: Client info in two columns
-  sheet.getRange('A9').setValue('اسم العميل:').setFontWeight('bold').setFontColor('#424242');
-  sheet.getRange('B9:C9').merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
+  // Row 9-11: Client info - English labels only, in columns D-F
   sheet.getRange('D9').setValue('Client Name:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('E9:F9').merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
 
-  sheet.getRange('A10').setValue('كود العميل:').setFontWeight('bold').setFontColor('#424242');
-  sheet.getRange('B10:C10').merge().setValue(clientCode).setFontColor('#1565c0');
   sheet.getRange('D10').setValue('Client Code:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('E10:F10').merge().setValue(clientCode).setFontColor('#1565c0');
 
-  sheet.getRange('A11').setValue('تاريخ الإصدار:').setFontWeight('bold').setFontColor('#424242');
-  sheet.getRange('B11:C11').merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
   sheet.getRange('D11').setValue('Issue Date:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('E11:F11').merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
 
   // Row 12: Decorative line
   sheet.getRange('A12:F12').merge().setBackground('#e0e0e0');
@@ -578,34 +572,29 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   // ═══════════════════════════════════════════════════════════════════════════
   const summaryRow = totalsRow + 2;
 
-  // Balance status
-  let balanceText, balanceColor, balanceTextAR;
+  // Balance color based on status
+  let balanceColor;
   if (totals.balance > 0) {
-    balanceText = 'Amount Due from Client';
-    balanceTextAR = 'المبلغ المستحق على العميل';
-    balanceColor = '#c62828'; // Red
+    balanceColor = '#c62828'; // Red - Amount due from client
   } else if (totals.balance < 0) {
-    balanceText = 'Credit Balance for Client';
-    balanceTextAR = 'رصيد لصالح العميل';
-    balanceColor = '#2e7d32'; // Green
+    balanceColor = '#2e7d32'; // Green - Credit balance for client
   } else {
-    balanceText = 'Account Settled';
-    balanceTextAR = 'الحساب مسوى';
-    balanceColor = '#1565c0'; // Blue
+    balanceColor = '#1565c0'; // Blue - Settled
   }
 
+  // Balance label
   sheet.getRange(summaryRow, 1, 1, 3).merge()
-    .setValue(balanceTextAR + '\n' + balanceText)
-    .setFontWeight('bold').setFontSize(11)
+    .setValue('Balance / الرصيد')
+    .setFontWeight('bold').setFontSize(12)
     .setBackground('#fafafa')
     .setFontColor('#424242')
     .setHorizontalAlignment('center')
-    .setVerticalAlignment('middle')
-    .setWrap(true);
-  sheet.setRowHeight(summaryRow, 45);
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(summaryRow, 40);
 
+  // Balance amount
   sheet.getRange(summaryRow, 4, 1, 3).merge()
-    .setValue(Math.abs(totals.balance))
+    .setValue(totals.balance)
     .setFontWeight('bold').setFontSize(16)
     .setBackground(balanceColor)
     .setFontColor('#ffffff')
