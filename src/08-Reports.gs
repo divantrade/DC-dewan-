@@ -411,9 +411,28 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   // Insert logo if URL is provided
   if (companyLogo && companyLogo.trim() !== '') {
     try {
+      // Convert Google Drive link to direct image URL if needed
+      let logoUrl = companyLogo.trim();
+
+      // Handle Google Drive sharing links
+      // Format: https://drive.google.com/file/d/FILE_ID/view
+      if (logoUrl.includes('drive.google.com/file/d/')) {
+        const fileId = logoUrl.match(/\/d\/([^\/]+)/);
+        if (fileId && fileId[1]) {
+          logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+        }
+      }
+      // Format: https://drive.google.com/open?id=FILE_ID
+      else if (logoUrl.includes('drive.google.com/open?id=')) {
+        const fileId = logoUrl.match(/id=([^&]+)/);
+        if (fileId && fileId[1]) {
+          logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+        }
+      }
+
       // Create a formula to display the image
       sheet.getRange('A1:A4').merge();
-      sheet.getRange('A1').setFormula('=IMAGE("' + companyLogo + '", 2)');
+      sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 2)');
       sheet.setColumnWidth(1, 80);
 
       // Company Name - shifted to B column
