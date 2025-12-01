@@ -161,18 +161,35 @@ function createTransactionsSheet(ss) {
   sheet.getRange(2, 21, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 22, lastRow, 1).setNumberFormat('#,##0.00');
   
-  // ===== Conditional Formatting =====
-  const statusRange = sheet.getRange(2, 19, lastRow, 1);
-  
+  // ===== Conditional Formatting - تلوين الصف بالكامل حسب الحالة =====
+  // نطبق التنسيق على كل الأعمدة (A-Y = 25 عمود) بناءً على قيمة Status (العمود S)
+  const fullRowRange = sheet.getRange(2, 1, lastRow, 25);
+
   sheet.setConditionalFormatRules([
+    // ✅ Paid (مدفوع) - أخضر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Paid').setBackground('#c8e6c9').setRanges([statusRange]).build(),
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Paid")')
+      .setBackground('#c8e6c9')
+      .setRanges([fullRowRange])
+      .build(),
+    // ⏳ Pending (معلق) - أصفر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Pending').setBackground('#fff9c4').setRanges([statusRange]).build(),
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Pending")')
+      .setBackground('#fff9c4')
+      .setRanges([fullRowRange])
+      .build(),
+    // 🔶 Partial (جزئي) - برتقالي
     SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Partial').setBackground('#ffe0b2').setRanges([statusRange]).build(),
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Partial")')
+      .setBackground('#ffe0b2')
+      .setRanges([fullRowRange])
+      .build(),
+    // ❌ Cancelled (ملغي) - أحمر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Cancelled').setBackground('#ffcdd2').setRanges([statusRange]).build()
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Cancelled")')
+      .setBackground('#ffcdd2')
+      .setRanges([fullRowRange])
+      .build()
   ]);
   
   sheet.setFrozenRows(1);
