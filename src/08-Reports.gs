@@ -281,126 +281,170 @@ function showClientStatement() {
   generateClientStatement(client.code, client.nameEN);
 }
 
+/**
+ * ✅ محدّث: كشف حساب بصيغة دائن/مدين/رصيد
+ */
 function generateClientStatement(clientCode, clientName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  
+
   const transSheet = ss.getSheetByName('Transactions');
   if (!transSheet || transSheet.getLastRow() < 2) {
     ui.alert('⚠️ No transactions found!');
     return;
   }
-  
+
   const transData = transSheet.getDataRange().getValues();
-  const headers = transData[0];
-  
-  // Find column indices
-  const cols = {};
-  headers.forEach((h, i) => cols[h] = i);
-  
+
   // Filter transactions for this client where Show in Statement = Yes
   const clientTrans = [];
-  
+
   for (let i = 1; i < transData.length; i++) {
     const code = transData[i][4]; // Client Code
     const name = transData[i][5]; // Client Name
     const showInStatement = transData[i][24]; // Column Y
-    
-    if ((code === clientCode || name === clientName) && 
+
+    if ((code === clientCode || name === clientName) &&
         (!showInStatement || showInStatement.includes('Yes'))) {
-      clientTrans.push({
-        date: transData[i][1],
-        movementType: transData[i][2],
-        item: transData[i][6],
-        description: transData[i][7],
-        amount: transData[i][10],
-        currency: transData[i][11],
-        status: transData[i][18],
-        invoiceNo: transData[i][17]
-      });
+
+      const movementType = transData[i][2] || '';
+      const amount = parseFloat(transData[i][10]) || 0;
+      const item = transData[i][6] || '';
+      const description = transData[i][7] || '';
+
+      // تحديد دائن/مدين بناءً على نوع الحركة
+      let credit = 0; // له (دائن) - ما يستحق على العميل
+      let debit = 0;  // عليه (مدين) - ما دفعه العميل
+
+      // استحقاق إيراد = له (دائن) - فاتورة مستحقة على العميل
+      if (movementType.includes('Revenue Accrual') || movementType.includes('استحقاق إيراد')) {
+        credit = amount;
+      }
+      // تحصيل إيراد = عليه (مدين) - دفعة من العميل
+      else if (movementType.includes('Revenue Collection') || movementType.includes('تحصيل إيراد')) {
+        debit = amount;
+      }
+
+      // فقط نضيف الحركات ذات القيمة
+      if (credit > 0 || debit > 0) {
+        clientTrans.push({
+          date: transData[i][1],
+          description: item || description || movementType,
+          credit: credit,
+          debit: debit
+        });
+      }
     }
   }
-  
+
   if (clientTrans.length === 0) {
-    ui.alert('ℹ️ No statement items found for this client.\n\n(Only items with "Show in Statement = Yes" are included)');
+    ui.alert('ℹ️ No statement items found for this client.');
     return;
   }
-  
-  // Calculate totals
-  let totalRevenue = 0, totalPaid = 0;
+
+  // ترتيب حسب التاريخ
+  clientTrans.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // حساب الإجماليات
+  let totalCredit = 0, totalDebit = 0;
   clientTrans.forEach(t => {
-    const amt = parseFloat(t.amount) || 0;
-    if (t.movementType && t.movementType.includes('Revenue')) {
-      totalRevenue += amt;
-    }
-    if (t.status && t.status.includes('Paid')) {
-      totalPaid += amt;
-    }
+    totalCredit += t.credit;
+    totalDebit += t.debit;
   });
-  
+  const balance = totalCredit - totalDebit;
+
   // Show summary
-  const summary = 
-    '📄 Client Statement: ' + clientName + '\n\n' +
+  const summary =
+    '📄 كشف حساب العميل: ' + clientName + '\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    'Transactions: ' + clientTrans.length + '\n' +
-    'Total Billed: ' + formatCurrency(totalRevenue, 'TRY') + '\n' +
-    'Total Paid: ' + formatCurrency(totalPaid, 'TRY') + '\n' +
-    'Balance Due: ' + formatCurrency(totalRevenue - totalPaid, 'TRY') + '\n' +
+    'عدد الحركات: ' + clientTrans.length + '\n' +
+    'إجمالي له (دائن): ' + formatCurrency(totalCredit, 'TRY') + '\n' +
+    'إجمالي عليه (مدين): ' + formatCurrency(totalDebit, 'TRY') + '\n' +
+    '───────────────────────────\n' +
+    'الرصيد المستحق: ' + formatCurrency(balance, 'TRY') + '\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-    'Export to sheet?';
-  
+    'هل تريد تصدير الكشف إلى شيت؟';
+
   const exportConfirm = ui.alert(summary, ui.ButtonSet.YES_NO);
-  
+
   if (exportConfirm === ui.Button.YES) {
-    exportClientStatement(clientCode, clientName, clientTrans);
+    exportClientStatement(clientCode, clientName, clientTrans, {
+      totalCredit: totalCredit,
+      totalDebit: totalDebit,
+      balance: balance
+    });
   }
 }
 
-function exportClientStatement(clientCode, clientName, transactions) {
+/**
+ * ✅ محدّث: تصدير كشف الحساب بصيغة دائن/مدين/رصيد
+ */
+function exportClientStatement(clientCode, clientName, transactions, totals) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetName = 'Statement - ' + clientName.substring(0, 20);
-  
+
   let sheet = ss.getSheetByName(sheetName);
   if (sheet) ss.deleteSheet(sheet);
-  
+
   sheet = ss.insertSheet(sheetName);
   sheet.setTabColor('#4caf50');
-  
+
   // Header
-  sheet.getRange('A1:F1').merge()
-    .setValue('Client Statement: ' + clientName)
-    .setFontSize(14).setFontWeight('bold').setBackground('#4caf50').setFontColor('#ffffff');
-  
-  sheet.getRange('A2').setValue('Generated: ' + formatDate(new Date(), 'yyyy-MM-dd HH:mm'));
-  sheet.getRange('A3').setValue('Client Code: ' + clientCode);
-  
+  sheet.getRange('A1:E1').merge()
+    .setValue('📄 كشف حساب العميل: ' + clientName)
+    .setFontSize(14).setFontWeight('bold').setBackground('#4caf50').setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
+
+  sheet.getRange('A2').setValue('تاريخ الإصدار: ' + formatDate(new Date(), 'yyyy-MM-dd HH:mm'));
+  sheet.getRange('A3').setValue('كود العميل: ' + clientCode);
+
   // Table headers
-  const headers = ['Date', 'Type', 'Item', 'Description', 'Amount', 'Status'];
+  const headers = ['التاريخ', 'الوصف', 'له (دائن)', 'عليه (مدين)', 'الرصيد'];
   sheet.getRange(5, 1, 1, headers.length)
     .setValues([headers])
-    .setFontWeight('bold').setBackground('#c8e6c9');
-  
-  // Data
-  const data = transactions.map(t => [
-    formatDate(t.date, 'yyyy-MM-dd'),
-    t.movementType,
-    t.item,
-    t.description,
-    t.amount,
-    t.status
-  ]);
-  
+    .setFontWeight('bold').setBackground('#c8e6c9')
+    .setHorizontalAlignment('center');
+
+  // Data with running balance
+  let runningBalance = 0;
+  const data = transactions.map(t => {
+    runningBalance += t.credit - t.debit;
+    return [
+      formatDate(t.date, 'yyyy-MM-dd'),
+      t.description,
+      t.credit || '',
+      t.debit || '',
+      runningBalance
+    ];
+  });
+
   if (data.length > 0) {
     sheet.getRange(6, 1, data.length, headers.length).setValues(data);
-    sheet.getRange(6, 5, data.length, 1).setNumberFormat('#,##0.00');
+    sheet.getRange(6, 3, data.length, 3).setNumberFormat('#,##0.00');
   }
-  
+
+  // Total row
+  const totalRow = 6 + data.length;
+  sheet.getRange(totalRow, 1, 1, 5)
+    .setValues([['الإجمالي', '', totals.totalCredit, totals.totalDebit, totals.balance]])
+    .setFontWeight('bold').setBackground('#a5d6a7');
+  sheet.getRange(totalRow, 3, 1, 3).setNumberFormat('#,##0.00');
+
+  // تلوين الرصيد النهائي
+  const balanceCell = sheet.getRange(totalRow, 5);
+  if (totals.balance > 0) {
+    balanceCell.setBackground('#ffcdd2'); // أحمر - مستحق على العميل
+  } else if (totals.balance < 0) {
+    balanceCell.setBackground('#c8e6c9'); // أخضر - للعميل رصيد
+  }
+
   // Column widths
-  const widths = [100, 150, 150, 200, 100, 100];
+  const widths = [100, 250, 120, 120, 120];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
+  sheet.setFrozenRows(5);
   ss.setActiveSheet(sheet);
-  SpreadsheetApp.getUi().alert('✅ Statement exported to sheet: ' + sheetName);
+  SpreadsheetApp.getUi().alert('✅ تم تصدير كشف الحساب إلى شيت: ' + sheetName);
 }
 
 // ==================== 4. CLIENT PROFITABILITY ====================
@@ -437,7 +481,12 @@ function showClientProfitability() {
 }
 
 /**
- * ✅ محدّث: تقرير الربحية في شيت منفصل مع تفاصيل كاملة
+ * ✅ محدّث: تقرير الربحية - يحسب فقط الاستحقاقات (بدون تكرار)
+ *
+ * المنطق الصحيح:
+ * - الإيرادات = Revenue Accrual فقط (قيمة الخدمة/المنتج)
+ * - المصروفات = Expense Accrual فقط (التكلفة الفعلية)
+ * - التحصيلات والمدفوعات لا تدخل في حساب الربحية
  */
 function generateClientProfitability(clientCode, clientName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -451,7 +500,7 @@ function generateClientProfitability(clientCode, clientName) {
 
   const transData = transSheet.getDataRange().getValues();
 
-  // جمع كل المعاملات لهذا العميل (بما فيها المخفية)
+  // جمع فقط الاستحقاقات (وليس التحصيلات/المدفوعات)
   const revenueItems = [];
   const expenseItems = [];
   let totalRevenue = 0;
@@ -465,29 +514,27 @@ function generateClientProfitability(clientCode, clientName) {
     const description = transData[i][7] || '';
     const amount = parseFloat(transData[i][13]) || 0; // Amount TRY
     const date = transData[i][1];
-    const status = transData[i][18] || '';
 
     if (code === clientCode || name === clientName) {
-      if (movementType.includes('Revenue')) {
+      // ✅ فقط استحقاق الإيراد (Revenue Accrual) - وليس التحصيل
+      if (movementType.includes('Revenue Accrual') || movementType.includes('استحقاق إيراد')) {
         totalRevenue += amount;
         revenueItems.push({
           date: date,
-          type: movementType,
-          item: item,
+          item: item || description || 'إيراد',
           description: description,
-          amount: amount,
-          status: status
+          amount: amount
         });
       }
-      if (movementType.includes('Expense') || movementType.includes('مصروف')) {
+
+      // ✅ فقط استحقاق المصروف (Expense Accrual) - وليس الدفع
+      if (movementType.includes('Expense Accrual') || movementType.includes('استحقاق مصروف')) {
         totalDirectExpenses += amount;
         expenseItems.push({
           date: date,
-          type: movementType,
-          item: item,
+          item: item || description || 'مصروف',
           description: description,
-          amount: amount,
-          status: status
+          amount: amount
         });
       }
     }
@@ -498,23 +545,22 @@ function generateClientProfitability(clientCode, clientName) {
   const transCount = revenueItems.length + expenseItems.length;
 
   if (transCount === 0) {
-    ui.alert('ℹ️ لا توجد معاملات لهذا العميل!\n\nClient Code: ' + clientCode);
+    ui.alert('ℹ️ لا توجد استحقاقات لهذا العميل!\n\nClient Code: ' + clientCode + '\n\n💡 تأكد من وجود حركات من نوع:\n• Revenue Accrual (استحقاق إيراد)\n• Expense Accrual (استحقاق مصروف)');
     return;
   }
 
   // عرض ملخص وسؤال عن التصدير
   const summary =
-    '💹 Profitability Report: ' + clientName + '\n\n' +
+    '💹 تقرير ربحية العميل: ' + clientName + '\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '📊 ملخص مالي\n' +
+    '📊 ملخص الربحية\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'إجمالي الإيرادات: ' + formatCurrency(totalRevenue, 'TRY') + '\n' +
-    'المصروفات المباشرة: ' + formatCurrency(totalDirectExpenses, 'TRY') + '\n' +
+    'إجمالي المصروفات: ' + formatCurrency(totalDirectExpenses, 'TRY') + '\n' +
     '───────────────────────────\n' +
     'صافي الربح: ' + formatCurrency(grossProfit, 'TRY') + '\n' +
     'هامش الربح: ' + profitMargin + '%\n' +
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    'عدد المعاملات: ' + transCount + '\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
     'هل تريد تصدير التقرير إلى شيت؟';
 
   const exportConfirm = ui.alert(summary, ui.ButtonSet.YES_NO);
@@ -530,7 +576,7 @@ function generateClientProfitability(clientCode, clientName) {
 }
 
 /**
- * تصدير تقرير الربحية إلى شيت منفصل
+ * ✅ محدّث: تصدير تقرير الربحية - بدون تكرار
  */
 function exportClientProfitability(clientCode, clientName, revenueItems, expenseItems, totals) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -547,28 +593,28 @@ function exportClientProfitability(clientCode, clientName, revenueItems, expense
   // ═══════════════════════════════════════════════════════════
   // العنوان الرئيسي
   // ═══════════════════════════════════════════════════════════
-  sheet.getRange('A1:F1').merge()
-    .setValue('💹 Profitability Report: ' + clientName)
+  sheet.getRange('A1:D1').merge()
+    .setValue('💹 تقرير ربحية العميل: ' + clientName)
     .setFontSize(14).setFontWeight('bold').setBackground('#9c27b0').setFontColor('#ffffff')
     .setHorizontalAlignment('center');
 
-  sheet.getRange('A2').setValue('Generated: ' + formatDate(new Date(), 'yyyy-MM-dd HH:mm'));
-  sheet.getRange('A3').setValue('Client Code: ' + clientCode);
+  sheet.getRange('A2').setValue('تاريخ الإصدار: ' + formatDate(new Date(), 'yyyy-MM-dd HH:mm'));
+  sheet.getRange('A3').setValue('كود العميل: ' + clientCode);
 
   // ═══════════════════════════════════════════════════════════
-  // ملخص الأرباح
+  // ملخص الربحية
   // ═══════════════════════════════════════════════════════════
   currentRow = 5;
   sheet.getRange(currentRow, 1, 1, 3).merge()
-    .setValue('📊 Financial Summary (الملخص المالي)')
+    .setValue('📊 ملخص الربحية')
     .setFontWeight('bold').setBackground('#e1bee7').setFontSize(12);
 
   currentRow++;
   const summaryData = [
-    ['Total Revenue (إجمالي الإيرادات)', totals.totalRevenue, 'TRY'],
-    ['Direct Expenses (المصروفات المباشرة)', totals.totalExpenses, 'TRY'],
-    ['Gross Profit (صافي الربح)', totals.grossProfit, 'TRY'],
-    ['Profit Margin (هامش الربح)', totals.profitMargin + '%', '']
+    ['إجمالي الإيرادات', totals.totalRevenue, 'TRY'],
+    ['إجمالي المصروفات', totals.totalExpenses, 'TRY'],
+    ['صافي الربح', totals.grossProfit, 'TRY'],
+    ['هامش الربح', totals.profitMargin + '%', '']
   ];
   sheet.getRange(currentRow, 1, summaryData.length, 3).setValues(summaryData);
   sheet.getRange(currentRow, 2, 3, 1).setNumberFormat('#,##0.00');
@@ -585,12 +631,12 @@ function exportClientProfitability(clientCode, clientName, revenueItems, expense
   // تفاصيل الإيرادات
   // ═══════════════════════════════════════════════════════════
   currentRow += summaryData.length + 2;
-  sheet.getRange(currentRow, 1, 1, 6).merge()
-    .setValue('📈 Revenue Details (تفاصيل الإيرادات) - ' + revenueItems.length + ' items')
+  sheet.getRange(currentRow, 1, 1, 4).merge()
+    .setValue('📈 تفاصيل الإيرادات (' + revenueItems.length + ' بند)')
     .setFontWeight('bold').setBackground('#c8e6c9').setFontSize(11);
 
   currentRow++;
-  const revenueHeaders = ['Date', 'Type', 'Item', 'Description', 'Amount (TRY)', 'Status'];
+  const revenueHeaders = ['التاريخ', 'البند', 'الوصف', 'المبلغ (TRY)'];
   sheet.getRange(currentRow, 1, 1, revenueHeaders.length)
     .setValues([revenueHeaders])
     .setFontWeight('bold').setBackground('#e8f5e9');
@@ -599,27 +645,32 @@ function exportClientProfitability(clientCode, clientName, revenueItems, expense
   if (revenueItems.length > 0) {
     const revenueData = revenueItems.map(r => [
       formatDate(r.date, 'yyyy-MM-dd'),
-      r.type,
       r.item,
       r.description,
-      r.amount,
-      r.status
+      r.amount
     ]);
-    sheet.getRange(currentRow, 1, revenueData.length, 6).setValues(revenueData);
-    sheet.getRange(currentRow, 5, revenueData.length, 1).setNumberFormat('#,##0.00');
+    sheet.getRange(currentRow, 1, revenueData.length, 4).setValues(revenueData);
+    sheet.getRange(currentRow, 4, revenueData.length, 1).setNumberFormat('#,##0.00');
+
+    // إجمالي الإيرادات
     currentRow += revenueData.length;
+    sheet.getRange(currentRow, 1, 1, 4)
+      .setValues([['', '', 'الإجمالي', totals.totalRevenue]])
+      .setFontWeight('bold').setBackground('#a5d6a7');
+    sheet.getRange(currentRow, 4).setNumberFormat('#,##0.00');
+    currentRow++;
   }
 
   // ═══════════════════════════════════════════════════════════
   // تفاصيل المصروفات
   // ═══════════════════════════════════════════════════════════
-  currentRow += 2;
-  sheet.getRange(currentRow, 1, 1, 6).merge()
-    .setValue('📉 Expense Details (تفاصيل المصروفات) - ' + expenseItems.length + ' items')
+  currentRow += 1;
+  sheet.getRange(currentRow, 1, 1, 4).merge()
+    .setValue('📉 تفاصيل المصروفات (' + expenseItems.length + ' بند)')
     .setFontWeight('bold').setBackground('#ffcdd2').setFontSize(11);
 
   currentRow++;
-  const expenseHeaders = ['Date', 'Type', 'Item', 'Description', 'Amount (TRY)', 'Status'];
+  const expenseHeaders = ['التاريخ', 'البند', 'الوصف', 'المبلغ (TRY)'];
   sheet.getRange(currentRow, 1, 1, expenseHeaders.length)
     .setValues([expenseHeaders])
     .setFontWeight('bold').setBackground('#ffebee');
@@ -628,23 +679,28 @@ function exportClientProfitability(clientCode, clientName, revenueItems, expense
   if (expenseItems.length > 0) {
     const expenseData = expenseItems.map(e => [
       formatDate(e.date, 'yyyy-MM-dd'),
-      e.type,
       e.item,
       e.description,
-      e.amount,
-      e.status
+      e.amount
     ]);
-    sheet.getRange(currentRow, 1, expenseData.length, 6).setValues(expenseData);
-    sheet.getRange(currentRow, 5, expenseData.length, 1).setNumberFormat('#,##0.00');
+    sheet.getRange(currentRow, 1, expenseData.length, 4).setValues(expenseData);
+    sheet.getRange(currentRow, 4, expenseData.length, 1).setNumberFormat('#,##0.00');
+
+    // إجمالي المصروفات
+    currentRow += expenseData.length;
+    sheet.getRange(currentRow, 1, 1, 4)
+      .setValues([['', '', 'الإجمالي', totals.totalExpenses]])
+      .setFontWeight('bold').setBackground('#ef9a9a');
+    sheet.getRange(currentRow, 4).setNumberFormat('#,##0.00');
   }
 
   // ═══════════════════════════════════════════════════════════
   // تنسيق الأعمدة
   // ═══════════════════════════════════════════════════════════
-  const widths = [100, 180, 150, 200, 120, 100];
+  const widths = [100, 200, 200, 120];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
-  sheet.setFrozenRows(4);
+  sheet.setFrozenRows(5);
   ss.setActiveSheet(sheet);
   SpreadsheetApp.getUi().alert('✅ تم تصدير التقرير إلى شيت: ' + sheetName);
 }
