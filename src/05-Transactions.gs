@@ -609,16 +609,15 @@ function onEdit(e) {
     // ───── Party Type (J, col 10) → Update Party Name Dropdown (I) ─────
     if (col === 10 && value) {
       updatePartyNameDropdown(ss, sheet, row, value);
-      
+
       // مسح القيمة القديمة في Party Name
       sheet.getRange(row, 9).setValue('');
     }
-    
-    // ───── Payment Method (O, col 15) → Row Color ─────
-    if (col === 15) {
-      applyPaymentMethodColor(sheet, row, value);
-    }
-    
+
+    // ───── Payment Method (O, col 15) ─────
+    // ملاحظة: تم إزالة التلوين اليدوي لأنه يتعارض مع التنسيق الشرطي لـ Status
+    // التلوين الآن يعتمد فقط على Status (العمود S) عبر التنسيق الشرطي
+
     // ───── Amount (K) / Currency (L) / Rate (M) → Amount TRY (N) ─────
     if (col === 11 || col === 12 || col === 13) {
       const amount = sheet.getRange(row, 11).getValue() || 0;
@@ -838,5 +837,70 @@ function generateMissingTransactionNumbers() {
   }
   
   ui.alert('✅ Generated ' + fixed + ' transaction numbers!');
+}
+
+// ==================== 10. UPDATE STATUS CONDITIONAL FORMATTING ====================
+/**
+ * تحديث التنسيق الشرطي لـ Status على الشيت الموجود
+ * ✅ يمسح الألوان اليدوية القديمة ويطبق التنسيق الشرطي الجديد
+ */
+function updateStatusConditionalFormatting() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Transactions');
+  const ui = SpreadsheetApp.getUi();
+
+  if (!sheet) {
+    ui.alert('❌ Transactions sheet not found!');
+    return;
+  }
+
+  const lastRow = Math.max(sheet.getLastRow(), 100);
+
+  // 1. مسح كل الألوان اليدوية من الصفوف (ما عدا الهيدر)
+  const dataRange = sheet.getRange(2, 1, lastRow - 1, 25);
+  dataRange.setBackground(null);
+
+  // 2. مسح قواعد التنسيق الشرطي القديمة
+  sheet.clearConditionalFormatRules();
+
+  // 3. تطبيق قواعد التنسيق الشرطي الجديدة
+  const fullRowRange = sheet.getRange(2, 1, lastRow, 25);
+
+  sheet.setConditionalFormatRules([
+    // ✅ Paid (مدفوع) - أخضر
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Paid")')
+      .setBackground('#c8e6c9')
+      .setRanges([fullRowRange])
+      .build(),
+    // ⏳ Pending (معلق) - أصفر
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Pending")')
+      .setBackground('#fff9c4')
+      .setRanges([fullRowRange])
+      .build(),
+    // 🔶 Partial (جزئي) - برتقالي
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Partial")')
+      .setBackground('#ffe0b2')
+      .setRanges([fullRowRange])
+      .build(),
+    // ❌ Cancelled (ملغي) - أحمر
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=REGEXMATCH($S2,"Cancelled")')
+      .setBackground('#ffcdd2')
+      .setRanges([fullRowRange])
+      .build()
+  ]);
+
+  ui.alert(
+    '✅ تم تحديث التنسيق الشرطي!\n\n' +
+    '🟢 Paid = أخضر\n' +
+    '🟡 Pending = أصفر\n' +
+    '🟠 Partial = برتقالي\n' +
+    '🔴 Cancelled = أحمر\n' +
+    '⚪ فارغ = بدون لون\n\n' +
+    '💡 الآن عند تغيير Status، يتغير لون الصف تلقائياً!'
+  );
 }
 // ==================== END OF PART 5 ====================
