@@ -475,15 +475,15 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   // CLIENT INFO SECTION - معلومات العميل
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Row 9-11: Client info - English labels only, in columns D-F
-  sheet.getRange('D9').setValue('Client Name:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('E9:F9').merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
+  // Row 9-11: Client info - English labels only, in columns B-C
+  sheet.getRange('B9').setValue('Client Name:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C9:F9').merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
 
-  sheet.getRange('D10').setValue('Client Code:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('E10:F10').merge().setValue(clientCode).setFontColor('#1565c0');
+  sheet.getRange('B10').setValue('Client Code:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C10:F10').merge().setValue(clientCode).setFontColor('#1565c0');
 
-  sheet.getRange('D11').setValue('Issue Date:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('E11:F11').merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
+  sheet.getRange('B11').setValue('Issue Date:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C11:F11').merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
 
   // Row 12: Decorative line
   sheet.getRange('A12:F12').merge().setBackground('#e0e0e0');
@@ -616,13 +616,6 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
     .setFontSize(10).setFontStyle('italic').setFontColor('#757575')
     .setHorizontalAlignment('center');
 
-  // Note about balance colors
-  const noteRow = footerRow + 1;
-  sheet.getRange(noteRow, 1, 1, 6).merge()
-    .setValue('🔴 رصيد أحمر = مستحق على العميل  |  🟢 رصيد أخضر = لصالح العميل')
-    .setFontSize(9).setFontColor('#9e9e9e')
-    .setHorizontalAlignment('center');
-
   // ═══════════════════════════════════════════════════════════════════════════
   // COLUMN WIDTHS - عرض الأعمدة
   // ═══════════════════════════════════════════════════════════════════════════
@@ -633,7 +626,7 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   sheet.setFrozenRows(14);
 
   // Set print settings for A4
-  sheet.getRange('A1:F' + (noteRow)).setFontFamily('Arial');
+  sheet.getRange('A1:F' + footerRow).setFontFamily('Arial');
 
   ss.setActiveSheet(sheet);
   SpreadsheetApp.getUi().alert('✅ تم تصدير كشف الحساب بنجاح!\n\nStatement exported to sheet: ' + sheetName);
