@@ -91,84 +91,134 @@ function createInvoiceLogSheet(ss) {
 function createInvoiceTemplateSheet(ss) {
   let sheet = ss.getSheetByName('Invoice Template');
   if (sheet) ss.deleteSheet(sheet);
-  
+
   sheet = ss.insertSheet('Invoice Template');
   sheet.setTabColor('#673ab7');
-  
-  // Set column widths
-  sheet.setColumnWidth(1, 40);
-  sheet.setColumnWidth(2, 280);
-  sheet.setColumnWidth(3, 50);
-  sheet.setColumnWidth(4, 100);
-  sheet.setColumnWidth(5, 100);
-  
+
+  // Set column widths (6 columns now)
+  sheet.setColumnWidth(1, 30);   // #
+  sheet.setColumnWidth(2, 140);  // Item
+  sheet.setColumnWidth(3, 180);  // Description
+  sheet.setColumnWidth(4, 40);   // Qty
+  sheet.setColumnWidth(5, 90);   // Unit Price
+  sheet.setColumnWidth(6, 90);   // Total
+
+  // Get logo URL from settings
+  const companyLogo = getSettingValue('Company Logo URL') || '';
+  let logoUrl = '';
+  if (companyLogo && companyLogo.trim() !== '') {
+    logoUrl = companyLogo.trim();
+    // Handle Google Drive sharing links
+    if (logoUrl.includes('drive.google.com/file/d/')) {
+      const fileId = logoUrl.match(/\/d\/([^\/]+)/);
+      if (fileId && fileId[1]) {
+        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+      }
+    } else if (logoUrl.includes('drive.google.com/open?id=')) {
+      const fileId = logoUrl.match(/id=([^&]+)/);
+      if (fileId && fileId[1]) {
+        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+      }
+    }
+  }
+
+  let currentRow = 1;
+
+  // Row 1: Logo (centered) - if provided
+  if (logoUrl) {
+    sheet.getRange('A1:F1').merge();
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+    sheet.setRowHeight(1, 60);
+    sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
+    currentRow = 2;
+  }
+
   // Company Header
-  sheet.getRange('A1:E1').merge()
+  sheet.getRange('A' + currentRow + ':F' + currentRow).merge()
     .setValue(getSettingValue('Company Name (EN)') || 'Dewan Consulting')
     .setFontSize(18).setFontWeight('bold').setHorizontalAlignment('center')
     .setBackground('#1565c0').setFontColor('#ffffff');
-  
-  sheet.getRange('A2:E2').merge()
+  currentRow++;
+
+  sheet.getRange('A' + currentRow + ':F' + currentRow).merge()
     .setValue(getSettingValue('Company Name (AR)') || 'ديوان للاستشارات')
     .setFontSize(14).setHorizontalAlignment('center')
     .setBackground('#1976d2').setFontColor('#ffffff');
-  
-  sheet.getRange('A3:E3').merge()
+  currentRow++;
+
+  sheet.getRange('A' + currentRow + ':F' + currentRow).merge()
     .setValue(getSettingValue('Company Address') || '')
     .setFontSize(10).setHorizontalAlignment('center');
-  
+  currentRow++;
+
+  // Empty row
+  currentRow++;
+
   // Invoice Title
-  sheet.getRange('A5:E5').merge()
+  sheet.getRange('A' + currentRow + ':F' + currentRow).merge()
     .setValue('INVOICE / فاتورة')
     .setFontSize(16).setFontWeight('bold').setHorizontalAlignment('center')
     .setBackground('#e3f2fd');
-  
-  // Invoice Details Section
+  currentRow++;
+
+  // Empty row
+  currentRow++;
+
+  // Invoice Details Section - store the starting row
+  const detailsStartRow = currentRow;
   const detailLabels = [
-    ['Invoice No:', '', '', 'Date:', ''],
-    ['Client:', '', '', '', ''],
-    ['Tax Number:', '', '', '', ''],
-    ['Address:', '', '', '', ''],
-    ['Period:', '', '', '', '']
+    ['Invoice No:', '', '', '', 'Date:', ''],
+    ['Client:', '', '', '', '', ''],
+    ['Tax Number:', '', '', '', '', ''],
+    ['Address:', '', '', '', '', ''],
+    ['Period:', '', '', '', '', '']
   ];
-  sheet.getRange('A7:E11').setValues(detailLabels);
-  sheet.getRange('A7:A11').setFontWeight('bold');
-  sheet.getRange('D7').setFontWeight('bold');
-  
-  // Items Table Header
-  sheet.getRange('A13:E13')
-    .setValues([['#', 'Description / الوصف', 'Qty', 'Unit Price', 'Total']])
+  sheet.getRange('A' + detailsStartRow + ':F' + (detailsStartRow + 4)).setValues(detailLabels);
+  sheet.getRange('A' + detailsStartRow + ':A' + (detailsStartRow + 4)).setFontWeight('bold');
+  sheet.getRange('E' + detailsStartRow).setFontWeight('bold');
+  currentRow = detailsStartRow + 5;
+
+  // Empty row
+  currentRow++;
+
+  // Items Table Header (6 columns)
+  const tableHeaderRow = currentRow;
+  sheet.getRange('A' + tableHeaderRow + ':F' + tableHeaderRow)
+    .setValues([['#', 'Item', 'Description', 'Qty', 'Unit Price', 'Total']])
     .setBackground('#1565c0').setFontColor('#ffffff').setFontWeight('bold')
     .setHorizontalAlignment('center');
-  
-  // Totals Section
-  sheet.getRange('D24').setValue('Subtotal:').setFontWeight('bold').setHorizontalAlignment('right');
-  sheet.getRange('D25').setValue('VAT (0%):').setFontWeight('bold').setHorizontalAlignment('right');
-  sheet.getRange('D26').setValue('TOTAL:').setFontWeight('bold').setFontSize(12).setHorizontalAlignment('right');
-  sheet.getRange('E24:E26').setNumberFormat('#,##0.00').setHorizontalAlignment('right');
-  sheet.getRange('E26').setFontWeight('bold').setFontSize(12).setBackground('#e3f2fd');
-  
+
+  // Totals Section (after items space)
+  const totalsRow = tableHeaderRow + 12; // Leave space for items
+  sheet.getRange('E' + totalsRow).setValue('Subtotal:').setFontWeight('bold').setHorizontalAlignment('right');
+  sheet.getRange('E' + (totalsRow + 1)).setValue('VAT (0%):').setFontWeight('bold').setHorizontalAlignment('right');
+  sheet.getRange('E' + (totalsRow + 2)).setValue('TOTAL:').setFontWeight('bold').setFontSize(12).setHorizontalAlignment('right');
+  sheet.getRange('F' + totalsRow + ':F' + (totalsRow + 2)).setNumberFormat('#,##0.00').setHorizontalAlignment('right');
+  sheet.getRange('F' + (totalsRow + 2)).setFontWeight('bold').setFontSize(12).setBackground('#e3f2fd');
+
   // Bank Details
-  sheet.getRange('A28:E28').merge()
+  const bankRow = totalsRow + 4;
+  sheet.getRange('A' + bankRow + ':F' + bankRow).merge()
     .setValue('Bank Details / التفاصيل البنكية')
     .setFontWeight('bold').setBackground('#f5f5f5');
-  
+
   const bankDetails = [
-    ['Bank:', getSettingValue('Bank Name') || 'Kuveyt Türk', '', '', ''],
-    ['IBAN (TRY):', getSettingValue('IBAN TRY') || '', '', '', ''],
-    ['IBAN (USD):', getSettingValue('IBAN USD') || '', '', '', ''],
-    ['SWIFT:', getSettingValue('SWIFT Code') || 'KTEFTRIS', '', '', '']
+    ['Bank:', getSettingValue('Bank Name') || 'Kuveyt Türk', '', '', '', ''],
+    ['IBAN (TRY):', getSettingValue('IBAN TRY') || '', '', '', '', ''],
+    ['IBAN (USD):', getSettingValue('IBAN USD') || '', '', '', '', ''],
+    ['SWIFT:', getSettingValue('SWIFT Code') || 'KTEFTRIS', '', '', '', '']
   ];
-  sheet.getRange('A29:E32').setValues(bankDetails);
-  sheet.getRange('A29:A32').setFontWeight('bold');
-  
+  sheet.getRange('A' + (bankRow + 1) + ':F' + (bankRow + 4)).setValues(bankDetails);
+  sheet.getRange('A' + (bankRow + 1) + ':A' + (bankRow + 4)).setFontWeight('bold');
+
   // Footer
-  sheet.getRange('A34:E34').merge()
+  const footerRow = bankRow + 6;
+  sheet.getRange('A' + footerRow + ':F' + footerRow).merge()
     .setValue('Thank you for your business! / شكراً لتعاملكم معنا')
     .setHorizontalAlignment('center').setFontStyle('italic');
-  
+
   sheet.setHiddenGridlines(true);
-  
+
   return sheet;
 }
 
@@ -281,7 +331,8 @@ function generateInvoiceFromTransaction() {
   const period = Utilities.formatDate(selectedData[0].transDate || invoiceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
   
   const items = selectedData.map(d => ({
-    description: (d.item || '') + (d.description ? ' - ' + d.description : ''),
+    item: d.item || '',
+    description: d.description || '',
     qty: 1,
     unitPrice: d.amount,
     total: d.amount
@@ -476,6 +527,7 @@ function generateCustomInvoice() {
     address: clientData.address || '',
     period: period,
     items: [{
+      item: '',
       description: description,
       qty: 1,
       unitPrice: netAmount,
@@ -612,7 +664,8 @@ function generateAllMonthlyInvoices() {
       address: clientData ? clientData.address : '',
       period: period,
       items: [{
-        description: 'Monthly Consulting (استشارات شهرية)',
+        item: 'Monthly Consulting',
+        description: 'استشارات شهرية',
         qty: 1,
         unitPrice: client.monthlyFee,
         total: client.monthlyFee
@@ -678,41 +731,54 @@ function fillInvoiceTemplate(ss, data) {
   if (!sheet) {
     sheet = createInvoiceTemplateSheet(ss);
   }
-  
-  // Clear previous data
-  sheet.getRange('B7:E11').clearContent();
-  sheet.getRange('A14:E22').clearContent();
-  sheet.getRange('E24:E26').clearContent();
-  
+
+  // Check if logo exists to determine row offset
+  const companyLogo = getSettingValue('Company Logo URL') || '';
+  const hasLogo = companyLogo && companyLogo.trim() !== '';
+  const rowOffset = hasLogo ? 1 : 0;
+
+  // Details start row (7 without logo, 8 with logo)
+  const detailsStartRow = 7 + rowOffset;
+  // Items start row (14 without logo, 15 with logo)
+  const itemsStartRow = 14 + rowOffset;
+  // Totals row (25 without logo, 26 with logo) - updated for 6 columns
+  const totalsStartRow = 26 + rowOffset;
+
+  // Clear previous data (6 columns now)
+  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
+  sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
+
   // Invoice details
-  sheet.getRange('B7').setValue(data.invoiceNo);
-  sheet.getRange('E7').setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
-  sheet.getRange('B8').setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
-  sheet.getRange('B9').setValue(data.taxNumber || '');
-  sheet.getRange('B10').setValue(data.address || '');
-  sheet.getRange('B11').setValue(data.period || '');
-  
-  // Items - dynamic numbering
+  sheet.getRange('B' + detailsStartRow).setValue(data.invoiceNo);
+  sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
+  sheet.getRange('B' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
+  sheet.getRange('B' + (detailsStartRow + 2)).setValue(data.taxNumber || '');
+  sheet.getRange('B' + (detailsStartRow + 3)).setValue(data.address || '');
+  sheet.getRange('B' + (detailsStartRow + 4)).setValue(data.period || '');
+
+  // Items - 6 columns: #, Item, Description, Qty, Unit Price, Total
   if (data.items && data.items.length > 0) {
     data.items.forEach((item, i) => {
-      const row = 14 + i;
-      if (row <= 22) {
+      const row = itemsStartRow + i;
+      if (row < itemsStartRow + 10) {
         sheet.getRange(row, 1).setValue(i + 1).setHorizontalAlignment('center');
-        sheet.getRange(row, 2).setValue(item.description);
-        sheet.getRange(row, 3).setValue(item.qty || 1).setHorizontalAlignment('center');
-        sheet.getRange(row, 4).setValue(item.unitPrice).setNumberFormat('#,##0.00');
-        sheet.getRange(row, 5).setValue(item.total).setNumberFormat('#,##0.00');
+        sheet.getRange(row, 2).setValue(item.item || '');  // Item column
+        sheet.getRange(row, 3).setValue(item.description || '');  // Description column
+        sheet.getRange(row, 4).setValue(item.qty || 1).setHorizontalAlignment('center');
+        sheet.getRange(row, 5).setValue(item.unitPrice).setNumberFormat('#,##0.00');
+        sheet.getRange(row, 6).setValue(item.total).setNumberFormat('#,##0.00');
       }
     });
   }
-  
-  // Totals
+
+  // Totals (column F now)
   const currencySymbol = data.currency === 'TRY' ? '₺' : (data.currency === 'USD' ? '$' : (data.currency === 'EUR' ? '€' : data.currency));
-  sheet.getRange('E24').setValue(data.subtotal).setNumberFormat('#,##0.00');
-  sheet.getRange('D25').setValue('VAT (' + (data.vatRate || 0) + '%):').setFontWeight('bold').setHorizontalAlignment('right');
-  sheet.getRange('E25').setValue(data.vat || 0).setNumberFormat('#,##0.00');
-  sheet.getRange('E26').setValue(data.total).setNumberFormat('#,##0.00 "' + currencySymbol + '"');
-  
+  sheet.getRange('F' + totalsStartRow).setValue(data.subtotal).setNumberFormat('#,##0.00');
+  sheet.getRange('E' + (totalsStartRow + 1)).setValue('VAT (' + (data.vatRate || 0) + '%):').setFontWeight('bold').setHorizontalAlignment('right');
+  sheet.getRange('F' + (totalsStartRow + 1)).setValue(data.vat || 0).setNumberFormat('#,##0.00');
+  sheet.getRange('F' + (totalsStartRow + 2)).setValue(data.total).setNumberFormat('#,##0.00 "' + currencySymbol + '"');
+
   return sheet;
 }
 
@@ -884,16 +950,25 @@ function showInvoiceLog() {
 function clearInvoiceTemplate() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Invoice Template');
-  
+
   if (!sheet) {
     SpreadsheetApp.getUi().alert('❌ Invoice Template not found!');
     return;
   }
-  
-  sheet.getRange('B7:E11').clearContent();
-  sheet.getRange('A14:E22').clearContent();
-  sheet.getRange('E24:E26').clearContent();
-  
+
+  // Check if logo exists to determine row offset
+  const companyLogo = getSettingValue('Company Logo URL') || '';
+  const hasLogo = companyLogo && companyLogo.trim() !== '';
+  const rowOffset = hasLogo ? 1 : 0;
+
+  const detailsStartRow = 7 + rowOffset;
+  const itemsStartRow = 14 + rowOffset;
+  const totalsStartRow = 26 + rowOffset;
+
+  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
+  sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
+
   SpreadsheetApp.getUi().alert('✅ Invoice Template cleared!');
 }
 

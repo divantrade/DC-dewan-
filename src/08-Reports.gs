@@ -408,116 +408,127 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   // HEADER SECTION - ترويسة الشركة
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Insert logo if URL is provided
+  // Convert Google Drive link to direct image URL if needed
+  let logoUrl = '';
   if (companyLogo && companyLogo.trim() !== '') {
-    try {
-      // Convert Google Drive link to direct image URL if needed
-      let logoUrl = companyLogo.trim();
+    logoUrl = companyLogo.trim();
 
-      // Handle Google Drive sharing links
-      // Format: https://drive.google.com/file/d/FILE_ID/view
-      if (logoUrl.includes('drive.google.com/file/d/')) {
-        const fileId = logoUrl.match(/\/d\/([^\/]+)/);
-        if (fileId && fileId[1]) {
-          logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-        }
+    // Handle Google Drive sharing links
+    if (logoUrl.includes('drive.google.com/file/d/')) {
+      const fileId = logoUrl.match(/\/d\/([^\/]+)/);
+      if (fileId && fileId[1]) {
+        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
       }
-      // Format: https://drive.google.com/open?id=FILE_ID
-      else if (logoUrl.includes('drive.google.com/open?id=')) {
-        const fileId = logoUrl.match(/id=([^&]+)/);
-        if (fileId && fileId[1]) {
-          logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-        }
+    } else if (logoUrl.includes('drive.google.com/open?id=')) {
+      const fileId = logoUrl.match(/id=([^&]+)/);
+      if (fileId && fileId[1]) {
+        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
       }
-
-      // Create a formula to display the image
-      sheet.getRange('A1:A4').merge();
-      sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 2)');
-      sheet.setColumnWidth(1, 80);
-
-      // Company Name - shifted to B column
-      sheet.getRange('B1:F1').merge()
-        .setValue(companyNameEN)
-        .setFontSize(22).setFontWeight('bold').setFontColor('#1565c0')
-        .setHorizontalAlignment('center').setVerticalAlignment('middle');
-      sheet.setRowHeight(1, 40);
-
-      // Arabic Company Name
-      sheet.getRange('B2:F2').merge()
-        .setValue(companyNameAR)
-        .setFontSize(16).setFontWeight('bold').setFontColor('#424242')
-        .setHorizontalAlignment('center').setVerticalAlignment('middle');
-      sheet.setRowHeight(2, 30);
-
-      // Address
-      sheet.getRange('B3:F3').merge()
-        .setValue('📍 ' + companyAddress)
-        .setFontSize(10).setFontColor('#616161')
-        .setHorizontalAlignment('center');
-
-      // Phone & Email
-      sheet.getRange('B4:F4').merge()
-        .setValue('📞 ' + companyPhone + '  |  ✉️ ' + companyEmail)
-        .setFontSize(10).setFontColor('#616161')
-        .setHorizontalAlignment('center');
-
-    } catch (e) {
-      // If logo fails, use text-only header
-      insertTextOnlyHeader(sheet, companyNameEN, companyNameAR, companyAddress, companyPhone, companyEmail);
     }
-  } else {
-    // No logo - use text-only header
-    insertTextOnlyHeader(sheet, companyNameEN, companyNameAR, companyAddress, companyPhone, companyEmail);
   }
 
-  // Row 5: Decorative line
-  sheet.getRange('A5:F5').merge()
-    .setBackground('#1565c0');
-  sheet.setRowHeight(5, 4);
+  let currentHeaderRow = 1;
 
-  // Row 6: Empty spacer
-  sheet.setRowHeight(6, 15);
+  // Row 1: Logo (centered) - if provided
+  if (logoUrl) {
+    sheet.getRange('A1:F1').merge();
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+    sheet.setRowHeight(1, 70);
+    sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
+    currentHeaderRow = 2;
+  }
+
+  // Company Name EN
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
+    .setValue(companyNameEN)
+    .setFontSize(22).setFontWeight('bold').setFontColor('#1565c0')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  sheet.setRowHeight(currentHeaderRow, 40);
+  currentHeaderRow++;
+
+  // Company Name AR
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
+    .setValue(companyNameAR)
+    .setFontSize(16).setFontWeight('bold').setFontColor('#424242')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  sheet.setRowHeight(currentHeaderRow, 30);
+  currentHeaderRow++;
+
+  // Address
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
+    .setValue('📍 ' + companyAddress)
+    .setFontSize(10).setFontColor('#616161')
+    .setHorizontalAlignment('center');
+  currentHeaderRow++;
+
+  // Phone & Email
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
+    .setValue('📞 ' + companyPhone + '  |  ✉️ ' + companyEmail)
+    .setFontSize(10).setFontColor('#616161')
+    .setHorizontalAlignment('center');
+  currentHeaderRow++;
+
+  // Decorative line
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
+    .setBackground('#1565c0');
+  sheet.setRowHeight(currentHeaderRow, 4);
+  currentHeaderRow++;
+
+  // Empty spacer
+  sheet.setRowHeight(currentHeaderRow, 15);
+  currentHeaderRow++;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STATEMENT TITLE - عنوان الكشف
   // ═══════════════════════════════════════════════════════════════════════════
-  sheet.getRange('A7:F7').merge()
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge()
     .setValue('كشف حساب العميل  |  STATEMENT OF ACCOUNT')
     .setFontSize(14).setFontWeight('bold').setBackground('#e3f2fd').setFontColor('#1565c0')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
-  sheet.setRowHeight(7, 35);
+  sheet.setRowHeight(currentHeaderRow, 35);
+  currentHeaderRow++;
 
-  // Row 8: Empty spacer
-  sheet.setRowHeight(8, 10);
+  // Empty spacer
+  sheet.setRowHeight(currentHeaderRow, 10);
+  currentHeaderRow++;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CLIENT INFO SECTION - معلومات العميل
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Row 9-11: Client info - English labels only, in columns B-C
-  sheet.getRange('B9').setValue('Client Name:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('C9:F9').merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
+  // Client Name
+  sheet.getRange('B' + currentHeaderRow).setValue('Client Name:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C' + currentHeaderRow + ':F' + currentHeaderRow).merge().setValue(clientName).setFontColor('#1565c0').setFontWeight('bold');
+  currentHeaderRow++;
 
-  sheet.getRange('B10').setValue('Client Code:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('C10:F10').merge().setValue(clientCode).setFontColor('#1565c0');
+  // Client Code
+  sheet.getRange('B' + currentHeaderRow).setValue('Client Code:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C' + currentHeaderRow + ':F' + currentHeaderRow).merge().setValue(clientCode).setFontColor('#1565c0');
+  currentHeaderRow++;
 
-  sheet.getRange('B11').setValue('Issue Date:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
-  sheet.getRange('C11:F11').merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
+  // Issue Date
+  sheet.getRange('B' + currentHeaderRow).setValue('Issue Date:').setFontWeight('bold').setFontColor('#424242').setHorizontalAlignment('right');
+  sheet.getRange('C' + currentHeaderRow + ':F' + currentHeaderRow).merge().setValue(formatDate(new Date(), 'yyyy-MM-dd')).setFontColor('#1565c0');
+  currentHeaderRow++;
 
-  // Row 12: Decorative line
-  sheet.getRange('A12:F12').merge().setBackground('#e0e0e0');
-  sheet.setRowHeight(12, 2);
+  // Decorative line
+  sheet.getRange('A' + currentHeaderRow + ':F' + currentHeaderRow).merge().setBackground('#e0e0e0');
+  sheet.setRowHeight(currentHeaderRow, 2);
+  currentHeaderRow++;
 
-  // Row 13: Empty spacer
-  sheet.setRowHeight(13, 10);
+  // Empty spacer
+  sheet.setRowHeight(currentHeaderRow, 10);
+  currentHeaderRow++;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TABLE SECTION - جدول الحركات
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Row 14: Table headers
+  const tableHeaderRow = currentHeaderRow;
+
+  // Table headers
   const headers = ['#', 'التاريخ\nDate', 'الوصف\nDescription', 'له (دائن)\nCredit', 'عليه (مدين)\nDebit', 'الرصيد\nBalance'];
-  sheet.getRange(14, 1, 1, headers.length)
+  sheet.getRange(tableHeaderRow, 1, 1, headers.length)
     .setValues([headers])
     .setFontWeight('bold')
     .setBackground('#1565c0')
@@ -525,7 +536,7 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
     .setHorizontalAlignment('center')
     .setVerticalAlignment('middle')
     .setWrap(true);
-  sheet.setRowHeight(14, 40);
+  sheet.setRowHeight(tableHeaderRow, 40);
 
   // Data with running balance and row numbers
   let runningBalance = 0;
@@ -541,7 +552,7 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
     ];
   });
 
-  const dataStartRow = 15;
+  const dataStartRow = tableHeaderRow + 1;
   if (data.length > 0) {
     sheet.getRange(dataStartRow, 1, data.length, headers.length).setValues(data);
 
@@ -642,7 +653,7 @@ function exportClientStatement(clientCode, clientName, transactions, totals) {
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
   // Freeze header rows
-  sheet.setFrozenRows(14);
+  sheet.setFrozenRows(tableHeaderRow);
 
   // Set print settings for A4
   sheet.getRange('A1:F' + footerRow).setFontFamily('Arial');
@@ -1030,39 +1041,6 @@ function refreshAllData() {
   } catch (error) {
     ui.alert('❌ Error refreshing data:\n\n' + error.message);
   }
-}
-
-// ==================== 8. HELPER FUNCTIONS ====================
-
-/**
- * Helper function to insert text-only header (when no logo is provided)
- */
-function insertTextOnlyHeader(sheet, companyNameEN, companyNameAR, companyAddress, companyPhone, companyEmail) {
-  // Row 1: Company Name (Large, Bold)
-  sheet.getRange('A1:F1').merge()
-    .setValue(companyNameEN)
-    .setFontSize(22).setFontWeight('bold').setFontColor('#1565c0')
-    .setHorizontalAlignment('center').setVerticalAlignment('middle');
-  sheet.setRowHeight(1, 40);
-
-  // Row 2: Arabic Company Name
-  sheet.getRange('A2:F2').merge()
-    .setValue(companyNameAR)
-    .setFontSize(16).setFontWeight('bold').setFontColor('#424242')
-    .setHorizontalAlignment('center').setVerticalAlignment('middle');
-  sheet.setRowHeight(2, 30);
-
-  // Row 3: Address
-  sheet.getRange('A3:F3').merge()
-    .setValue('📍 ' + companyAddress)
-    .setFontSize(10).setFontColor('#616161')
-    .setHorizontalAlignment('center');
-
-  // Row 4: Phone & Email
-  sheet.getRange('A4:F4').merge()
-    .setValue('📞 ' + companyPhone + '  |  ✉️ ' + companyEmail)
-    .setFontSize(10).setFontColor('#616161')
-    .setHorizontalAlignment('center');
 }
 
 // ==================== END OF PART 8 ====================
