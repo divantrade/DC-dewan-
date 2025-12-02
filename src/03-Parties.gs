@@ -509,7 +509,15 @@ function addCompanyTypeColumn() {
 
   // Check if Company Type column already exists
   if (headers.includes('Company Type')) {
-    ui.alert('✅ Company Type column already exists!');
+    // Update the validation with new options
+    const companyTypeCol = headers.indexOf('Company Type') + 1;
+    const lastRow = Math.max(sheet.getLastRow(), 500);
+    const companyTypeValidation = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
+      .build();
+    sheet.getRange(2, companyTypeCol, lastRow, 1).setDataValidation(companyTypeValidation);
+
+    ui.alert('✅ Company Type validation updated!\n\nOptions: Limited, Şahıs, Anonim, Mükellef');
     return;
   }
 
