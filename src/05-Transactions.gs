@@ -19,7 +19,10 @@ const DROPDOWN_VALUES = {
     'Currency Exchange (صرف عملات)',
     'Adjustment Add (تسوية +)',
     'Adjustment Deduct (تسوية -)',
-    'Opening Balance (رصيد افتتاحي)'
+    'Opening Balance (رصيد افتتاحي)',
+    'Advance Issue (صرف عهدة)',
+    'Advance Return (رد عهدة)',
+    'Expense (مصروف)'
   ],
   categories: [
     'Service Revenue (إيرادات خدمات)',
@@ -29,7 +32,9 @@ const DROPDOWN_VALUES = {
     'Transfers (تحويلات)',
     'Currency Exchange (صرف عملات)',
     'Adjustments (تسويات)',
-    'Opening Balance (رصيد افتتاحي)'
+    'Opening Balance (رصيد افتتاحي)',
+    'Petty Cash Advance (عهدة مؤقتة)',
+    'Other Expense (مصروف آخر)'
   ],
   partyTypes: [
     'Client (عميل)',
@@ -41,7 +46,8 @@ const DROPDOWN_VALUES = {
     'Cash (نقدي)',
     'Bank Transfer (تحويل بنكي)',
     'Accrual (استحقاق)',
-    'Credit Card (بطاقة ائتمان)'
+    'Credit Card (بطاقة ائتمان)',
+    'Advance (عهدة)'
   ],
   paymentStatus: [
     'Pending (معلق)',
