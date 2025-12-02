@@ -49,7 +49,7 @@ function createClientsSheet(ss) {
   // Data validations
   // Company Type validation (column E)
   const companyTypeValidation = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Limited (شركة محدودة)', 'Sole Proprietorship (شركة شخصية)', 'Joint Stock (شركة مساهمة)', 'Branch (فرع)', 'Other (أخرى)'], true)
+    .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
     .build();
   sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
 
@@ -109,7 +109,7 @@ function addNewClient() {
   
   // Set defaults
   sheet.getRange(lastRow, 1).setValue(newCode);
-  sheet.getRange(lastRow, 5).setValue('Limited (شركة محدودة)'); // Company Type
+  sheet.getRange(lastRow, 5).setValue('Limited'); // Company Type
   sheet.getRange(lastRow, 13).setValue('TRY'); // Fee Currency
   sheet.getRange(lastRow, 14).setValue('AR'); // Language
   sheet.getRange(lastRow, 17).setValue('Active'); // Status
@@ -532,7 +532,7 @@ function addCompanyTypeColumn() {
   // Add validation
   const lastRow = Math.max(sheet.getLastRow(), 500);
   const companyTypeValidation = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Limited (شركة محدودة)', 'Sole Proprietorship (شركة شخصية)', 'Joint Stock (شركة مساهمة)', 'Branch (فرع)', 'Other (أخرى)'], true)
+    .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
     .build();
   sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
 
@@ -541,16 +541,16 @@ function addCompanyTypeColumn() {
   if (existingRows > 0) {
     for (let i = 2; i <= sheet.getLastRow(); i++) {
       if (sheet.getRange(i, 2).getValue()) { // If has company name
-        sheet.getRange(i, 5).setValue('Limited (شركة محدودة)');
+        sheet.getRange(i, 5).setValue('Limited');
       }
     }
   }
 
   ui.alert(
     '✅ Company Type column added!\n\n' +
-    'عامود نوع الشركة تمت إضافته بنجاح\n\n' +
-    'Default value set to: Limited (شركة محدودة)\n' +
-    'You can change it for each client.'
+    'Şirket Türü sütunu eklendi\n\n' +
+    'Options: Limited, Şahıs, Anonim, Mükellef\n' +
+    'Default: Limited'
   );
 }
 
