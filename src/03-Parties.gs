@@ -493,6 +493,68 @@ function getPartyListByType(partyType) {
 // ==================== CLIENT UTILITIES ====================
 
 /**
+ * إضافة عامود Company Type للشيت الموجود بدون حذف البيانات
+ */
+function addCompanyTypeColumn() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Clients');
+
+  if (!sheet) {
+    ui.alert('❌ Clients sheet not found!');
+    return;
+  }
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Check if Company Type column already exists
+  if (headers.includes('Company Type')) {
+    ui.alert('✅ Company Type column already exists!');
+    return;
+  }
+
+  // Find where to insert (after Company Name (TR) - column D)
+  const insertAfterCol = 4; // Column D
+
+  // Insert new column at position 5 (E)
+  sheet.insertColumnAfter(insertAfterCol);
+
+  // Set header
+  sheet.getRange(1, 5).setValue('Company Type')
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  // Set column width
+  sheet.setColumnWidth(5, 150);
+
+  // Add validation
+  const lastRow = Math.max(sheet.getLastRow(), 500);
+  const companyTypeValidation = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Limited (شركة محدودة)', 'Sole Proprietorship (شركة شخصية)', 'Joint Stock (شركة مساهمة)', 'Branch (فرع)', 'Other (أخرى)'], true)
+    .build();
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
+
+  // Set default value for existing clients
+  const existingRows = sheet.getLastRow() - 1;
+  if (existingRows > 0) {
+    for (let i = 2; i <= sheet.getLastRow(); i++) {
+      if (sheet.getRange(i, 2).getValue()) { // If has company name
+        sheet.getRange(i, 5).setValue('Limited (شركة محدودة)');
+      }
+    }
+  }
+
+  ui.alert(
+    '✅ Company Type column added!\n\n' +
+    'عامود نوع الشركة تمت إضافته بنجاح\n\n' +
+    'Default value set to: Limited (شركة محدودة)\n' +
+    'You can change it for each client.'
+  );
+}
+
+/**
  * توليد أكواد تلقائية للعملاء الذين ليس لديهم كود
  */
 function generateMissingClientCodes() {

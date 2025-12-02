@@ -60,7 +60,9 @@ function onOpen() {
       .addItem('➕ Add Employee (إضافة موظف)', 'addNewEmployee')
       .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
-      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability'))
+      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
+      .addSeparator()
+      .addItem('🏢 Add Company Type Column', 'addCompanyTypeColumn'))
     
     // Cash & Bank
     .addSubMenu(ui.createMenu('🏦 Cash & Bank (الخزائن والبنوك)')
