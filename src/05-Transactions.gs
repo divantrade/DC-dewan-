@@ -528,7 +528,57 @@ function refreshAllDropdowns() {
   refreshClientDropdowns();
   refreshItemsDropdown();
   refreshCashBankDropdown();
+  refreshTransactionsValidation();
   SpreadsheetApp.getUi().alert('✅ All dropdowns refreshed!');
+}
+
+// ==================== REFRESH TRANSACTIONS VALIDATION ====================
+/**
+ * تحديث جميع قواعد التحقق في شيت Transactions
+ */
+function refreshTransactionsValidation() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Transactions');
+
+  if (!sheet) return;
+
+  const lastRow = Math.max(sheet.getLastRow(), 1000);
+
+  // Movement Type (C - column 3)
+  const movementRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.movementTypes, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 3, lastRow, 1).setDataValidation(movementRule);
+
+  // Category (D - column 4)
+  const categoryRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.categories, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 4, lastRow, 1).setDataValidation(categoryRule);
+
+  // Party Type (J - column 10)
+  const partyTypeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.partyTypes, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 10, lastRow, 1).setDataValidation(partyTypeRule);
+
+  // Payment Method (O - column 15)
+  const paymentMethodRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.paymentMethods, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 15, lastRow, 1).setDataValidation(paymentMethodRule);
+
+  // Payment Status (S - column 19)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.paymentStatus, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 19, lastRow, 1).setDataValidation(statusRule);
+
+  // Show in Statement (Y - column 25)
+  const showRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(DROPDOWN_VALUES.showInStatement, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
 }
 
 // ==================== 7. ONEDIT HANDLER ====================
