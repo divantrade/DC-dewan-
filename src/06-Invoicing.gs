@@ -169,14 +169,15 @@ function createInvoiceTemplateSheet(ss) {
   const detailLabels = [
     ['Invoice No:', '', '', '', 'Date:', ''],
     ['Client:', '', '', '', '', ''],
+    ['Company Type:', '', '', '', '', ''],
     ['Tax Number:', '', '', '', '', ''],
     ['Address:', '', '', '', '', ''],
     ['Period:', '', '', '', '', '']
   ];
-  sheet.getRange('A' + detailsStartRow + ':F' + (detailsStartRow + 4)).setValues(detailLabels);
-  sheet.getRange('A' + detailsStartRow + ':A' + (detailsStartRow + 4)).setFontWeight('bold');
+  sheet.getRange('A' + detailsStartRow + ':F' + (detailsStartRow + 5)).setValues(detailLabels);
+  sheet.getRange('A' + detailsStartRow + ':A' + (detailsStartRow + 5)).setFontWeight('bold');
   sheet.getRange('E' + detailsStartRow).setFontWeight('bold');
-  currentRow = detailsStartRow + 5;
+  currentRow = detailsStartRow + 6;
 
   // Empty row
   currentRow++;
@@ -343,6 +344,7 @@ function generateInvoiceFromTransaction() {
     invoiceDate: invoiceDate,
     clientName: firstClientName || (clientData ? clientData.nameEN : ''),
     clientNameAR: clientData ? clientData.nameAR : '',
+    companyType: clientData ? clientData.companyType : '',
     taxNumber: clientData ? clientData.taxNumber : '',
     address: clientData ? clientData.address : '',
     period: period,
@@ -523,6 +525,7 @@ function generateCustomInvoice() {
     invoiceDate: invoiceDate,
     clientName: clientData.nameEN,
     clientNameAR: clientData.nameAR || '',
+    companyType: clientData.companyType || '',
     taxNumber: clientData.taxNumber || '',
     address: clientData.address || '',
     period: period,
@@ -660,6 +663,7 @@ function generateAllMonthlyInvoices() {
       invoiceDate: invoiceDate,
       clientName: client.nameEN,
       clientNameAR: clientData ? clientData.nameAR : '',
+      companyType: clientData ? clientData.companyType : '',
       taxNumber: clientData ? clientData.taxNumber : '',
       address: clientData ? clientData.address : '',
       period: period,
@@ -739,13 +743,13 @@ function fillInvoiceTemplate(ss, data) {
 
   // Details start row (7 without logo, 8 with logo)
   const detailsStartRow = 7 + rowOffset;
-  // Items start row (14 without logo, 15 with logo)
-  const itemsStartRow = 14 + rowOffset;
-  // Totals row (25 without logo, 26 with logo) - updated for 6 columns
-  const totalsStartRow = 26 + rowOffset;
+  // Items start row (15 without logo, 16 with logo) - adjusted for Company Type row
+  const itemsStartRow = 15 + rowOffset;
+  // Totals row (27 without logo, 28 with logo) - adjusted for Company Type row
+  const totalsStartRow = 27 + rowOffset;
 
-  // Clear previous data (6 columns now)
-  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  // Clear previous data (6 columns now, 6 detail rows)
+  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 5)).clearContent();
   sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
   sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
 
@@ -753,9 +757,10 @@ function fillInvoiceTemplate(ss, data) {
   sheet.getRange('B' + detailsStartRow).setValue(data.invoiceNo);
   sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
   sheet.getRange('B' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
-  sheet.getRange('B' + (detailsStartRow + 2)).setValue(data.taxNumber || '');
-  sheet.getRange('B' + (detailsStartRow + 3)).setValue(data.address || '');
-  sheet.getRange('B' + (detailsStartRow + 4)).setValue(data.period || '');
+  sheet.getRange('B' + (detailsStartRow + 2)).setValue(data.companyType || '');
+  sheet.getRange('B' + (detailsStartRow + 3)).setValue(data.taxNumber || '');
+  sheet.getRange('B' + (detailsStartRow + 4)).setValue(data.address || '');
+  sheet.getRange('B' + (detailsStartRow + 5)).setValue(data.period || '');
 
   // Items - 6 columns: #, Item, Description, Qty, Unit Price, Total
   if (data.items && data.items.length > 0) {
@@ -962,10 +967,10 @@ function clearInvoiceTemplate() {
   const rowOffset = hasLogo ? 1 : 0;
 
   const detailsStartRow = 7 + rowOffset;
-  const itemsStartRow = 14 + rowOffset;
-  const totalsStartRow = 26 + rowOffset;
+  const itemsStartRow = 15 + rowOffset;
+  const totalsStartRow = 27 + rowOffset;
 
-  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 5)).clearContent();
   sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
   sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
 

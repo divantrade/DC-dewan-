@@ -17,20 +17,21 @@ function createClientsSheet(ss) {
     'Company Name (EN)',     // B
     'Company Name (AR)',     // C
     'Company Name (TR)',     // D
-    'Tax Number',            // E
-    'Tax Office',            // F
-    'Address',               // G
-    'Phone',                 // H
-    'Email',                 // I
-    'Contact Person',        // J
-    'Monthly Fee',           // K
-    'Fee Currency',          // L
-    'Language',              // M
-    'Folder ID',             // N
-    'Contract Start',        // O
-    'Status',                // P
-    'Notes',                 // Q
-    'Created Date'           // R
+    'Company Type',          // E - NEW
+    'Tax Number',            // F
+    'Tax Office',            // G
+    'Address',               // H
+    'Phone',                 // I
+    'Email',                 // J
+    'Contact Person',        // K
+    'Monthly Fee',           // L
+    'Fee Currency',          // M
+    'Language',              // N
+    'Folder ID',             // O
+    'Contract Start',        // P
+    'Status',                // Q
+    'Notes',                 // R
+    'Created Date'           // S
   ];
   
   sheet.getRange(1, 1, 1, headers.length)
@@ -40,34 +41,40 @@ function createClientsSheet(ss) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
   
-  const widths = [100, 180, 150, 180, 120, 120, 250, 120, 200, 150, 100, 80, 70, 280, 100, 80, 200, 100];
+  const widths = [100, 180, 150, 180, 120, 120, 120, 250, 120, 200, 150, 100, 80, 70, 280, 100, 80, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
   const lastRow = 500;
-  
+
   // Data validations
+  // Company Type validation (column E)
+  const companyTypeValidation = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Limited (شركة محدودة)', 'Sole Proprietorship (شركة شخصية)', 'Joint Stock (شركة مساهمة)', 'Branch (فرع)', 'Other (أخرى)'], true)
+    .build();
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
+
   const currencyValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(CURRENCIES, true)
     .build();
-  sheet.getRange(2, 12, lastRow, 1).setDataValidation(currencyValidation);
-  
+  sheet.getRange(2, 13, lastRow, 1).setDataValidation(currencyValidation);
+
   const languageValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['EN', 'AR', 'TR'], true)
     .build();
-  sheet.getRange(2, 13, lastRow, 1).setDataValidation(languageValidation);
-  
+  sheet.getRange(2, 14, lastRow, 1).setDataValidation(languageValidation);
+
   const statusValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Active', 'Inactive', 'Suspended'], true)
     .build();
-  sheet.getRange(2, 16, lastRow, 1).setDataValidation(statusValidation);
-  
+  sheet.getRange(2, 17, lastRow, 1).setDataValidation(statusValidation);
+
   // Number formats
-  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('yyyy-mm-dd');
-  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('yyyy-mm-dd');
   
-  // Conditional formatting for Status
-  const statusRange = sheet.getRange(2, 16, lastRow, 1);
+  // Conditional formatting for Status (column Q = 17)
+  const statusRange = sheet.getRange(2, 17, lastRow, 1);
   sheet.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
@@ -102,10 +109,11 @@ function addNewClient() {
   
   // Set defaults
   sheet.getRange(lastRow, 1).setValue(newCode);
-  sheet.getRange(lastRow, 12).setValue('TRY');
-  sheet.getRange(lastRow, 13).setValue('AR');
-  sheet.getRange(lastRow, 16).setValue('Active');
-  sheet.getRange(lastRow, 18).setValue(new Date());
+  sheet.getRange(lastRow, 5).setValue('Limited (شركة محدودة)'); // Company Type
+  sheet.getRange(lastRow, 13).setValue('TRY'); // Fee Currency
+  sheet.getRange(lastRow, 14).setValue('AR'); // Language
+  sheet.getRange(lastRow, 17).setValue('Active'); // Status
+  sheet.getRange(lastRow, 19).setValue(new Date()); // Created Date
   
   sheet.setActiveRange(sheet.getRange(lastRow, 2));
   ss.setActiveSheet(sheet);
@@ -144,6 +152,7 @@ function getClientData(clientCode) {
         nameEN: data[i][cols['Company Name (EN)']] || '',
         nameAR: data[i][cols['Company Name (AR)']] || '',
         nameTR: data[i][cols['Company Name (TR)']] || '',
+        companyType: data[i][cols['Company Type']] || '',
         taxNumber: data[i][cols['Tax Number']] || '',
         taxOffice: data[i][cols['Tax Office']] || '',
         address: data[i][cols['Address']] || '',
