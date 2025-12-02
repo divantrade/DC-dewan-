@@ -74,7 +74,18 @@ function onOpen() {
       .addSeparator()
       .addItem('📊 View Cash Boxes', 'showCashBoxes')
       .addItem('📊 View Bank Accounts', 'showBankAccounts'))
-    
+
+    // Advances (العهد)
+    .addSubMenu(ui.createMenu('💼 Advances (العهد)')
+      .addItem('💵 Issue Advance (صرف عهدة)', 'issueAdvance')
+      .addItem('📝 Add Expense (إضافة مصروف)', 'addAdvanceExpense')
+      .addItem('✅ Settle Advance (تسوية عهدة)', 'settleAdvance')
+      .addSeparator()
+      .addItem('📊 Advance Statement (كشف عهدة)', 'showAdvanceStatement')
+      .addSeparator()
+      .addItem('📋 View Advances', 'showAdvances')
+      .addItem('📋 View Advance Expenses', 'showAdvanceExpenses'))
+
     
     // Reports
     .addSubMenu(ui.createMenu('📊 Reports (التقارير)')
