@@ -184,7 +184,7 @@ function createInvoiceTemplateSheet(ss) {
   // Items Table Header (6 columns)
   const tableHeaderRow = currentRow;
   sheet.getRange('A' + tableHeaderRow + ':F' + tableHeaderRow)
-    .setValues([['#', 'Item / البند', 'Description', 'Qty', 'Unit Price', 'Total']])
+    .setValues([['#', 'Item', 'Description', 'Qty', 'Unit Price', 'Total']])
     .setBackground('#1565c0').setFontColor('#ffffff').setFontWeight('bold')
     .setHorizontalAlignment('center');
 
