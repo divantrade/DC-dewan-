@@ -322,12 +322,17 @@ function issueAdvance() {
     }
   }
 
-  // Update Cash/Bank balance
-  if (sourceType === 'Cash') {
-    recordCashTransaction(sourceName, advanceDate, 'Advance: ' + advanceCode + ' - ' + selectedEmployee.nameEN, -amount, currency, advanceCode);
-  } else {
-    recordBankTransaction(sourceName, advanceDate, 'Advance: ' + advanceCode + ' - ' + selectedEmployee.nameEN, -amount, currency, advanceCode);
-  }
+  // Update Cash/Bank balance (withdrawal - OUT)
+  addCashBankEntry(
+    sourceName,                                    // Sheet name
+    advanceDate,                                   // Date
+    'Advance: ' + advanceCode + ' - ' + selectedEmployee.nameEN,  // Description
+    advanceCode,                                   // Reference
+    selectedEmployee.nameEN,                       // Party
+    '',                                            // Trans Code
+    amount,                                        // Amount
+    'OUT'                                          // Direction (withdrawal)
+  );
 
   ss.setActiveSheet(advSheet);
 
@@ -598,12 +603,17 @@ function settleAdvance() {
       transSheet.getRange(transRow, 25).setValue('Yes (نعم)');
     }
 
-    // Update Cash/Bank
-    if (updatedAdvance.sourceType === 'Cash') {
-      recordCashTransaction(updatedAdvance.sourceName, settlementDate, 'Return: ' + updatedAdvance.code, updatedAdvance.remaining, updatedAdvance.currency, updatedAdvance.code);
-    } else {
-      recordBankTransaction(updatedAdvance.sourceName, settlementDate, 'Return: ' + updatedAdvance.code, updatedAdvance.remaining, updatedAdvance.currency, updatedAdvance.code);
-    }
+    // Update Cash/Bank (deposit - IN)
+    addCashBankEntry(
+      updatedAdvance.sourceName,                     // Sheet name
+      settlementDate,                                // Date
+      'Return Advance: ' + updatedAdvance.code,      // Description
+      updatedAdvance.code,                           // Reference
+      updatedAdvance.employeeName,                   // Party
+      '',                                            // Trans Code
+      updatedAdvance.remaining,                      // Amount
+      'IN'                                           // Direction (deposit/return)
+    );
   }
 
   // Update Advance status
