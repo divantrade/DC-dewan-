@@ -60,7 +60,9 @@ function onOpen() {
       .addItem('➕ Add Employee (إضافة موظف)', 'addNewEmployee')
       .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
-      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability'))
+      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
+      .addSeparator()
+      .addItem('🏢 Add Company Type Column', 'addCompanyTypeColumn'))
     
     // Cash & Bank
     .addSubMenu(ui.createMenu('🏦 Cash & Bank (الخزائن والبنوك)')
@@ -72,7 +74,18 @@ function onOpen() {
       .addSeparator()
       .addItem('📊 View Cash Boxes', 'showCashBoxes')
       .addItem('📊 View Bank Accounts', 'showBankAccounts'))
-    
+
+    // Advances (العهد)
+    .addSubMenu(ui.createMenu('💼 Advances (العهد)')
+      .addItem('💵 Issue Advance (صرف عهدة)', 'issueAdvance')
+      .addItem('📝 Add Expense (إضافة مصروف)', 'addAdvanceExpense')
+      .addItem('✅ Settle Advance (تسوية عهدة)', 'settleAdvance')
+      .addSeparator()
+      .addItem('📊 Advance Statement (كشف عهدة)', 'showAdvanceStatement')
+      .addSeparator()
+      .addItem('📋 View Advances', 'showAdvances')
+      .addItem('📋 View Advance Expenses', 'showAdvanceExpenses'))
+
     
     // Reports
     .addSubMenu(ui.createMenu('📊 Reports (التقارير)')

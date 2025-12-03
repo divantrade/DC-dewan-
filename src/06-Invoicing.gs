@@ -166,16 +166,29 @@ function createInvoiceTemplateSheet(ss) {
 
   // Invoice Details Section - store the starting row
   const detailsStartRow = currentRow;
-  const detailLabels = [
-    ['Invoice No:', '', '', '', 'Date:', ''],
-    ['Client:', '', '', '', '', ''],
-    ['Tax Number:', '', '', '', '', ''],
-    ['Address:', '', '', '', '', ''],
-    ['Period:', '', '', '', '', '']
-  ];
-  sheet.getRange('A' + detailsStartRow + ':F' + (detailsStartRow + 4)).setValues(detailLabels);
-  sheet.getRange('A' + detailsStartRow + ':A' + (detailsStartRow + 4)).setFontWeight('bold');
-  sheet.getRange('E' + detailsStartRow).setFontWeight('bold');
+
+  // Row 1: Invoice No & Date
+  sheet.getRange('A' + detailsStartRow + ':B' + detailsStartRow).merge().setValue('Invoice No:').setFontWeight('bold');
+  sheet.getRange('C' + detailsStartRow + ':D' + detailsStartRow).merge(); // Value placeholder
+  sheet.getRange('E' + detailsStartRow).setValue('Date:').setFontWeight('bold');
+  // F is for date value
+
+  // Row 2: Client
+  sheet.getRange('A' + (detailsStartRow + 1) + ':B' + (detailsStartRow + 1)).merge().setValue('Client:').setFontWeight('bold');
+  sheet.getRange('C' + (detailsStartRow + 1) + ':F' + (detailsStartRow + 1)).merge(); // Value placeholder
+
+  // Row 3: Company Type
+  sheet.getRange('A' + (detailsStartRow + 2) + ':B' + (detailsStartRow + 2)).merge().setValue('Company Type:').setFontWeight('bold');
+  sheet.getRange('C' + (detailsStartRow + 2) + ':F' + (detailsStartRow + 2)).merge(); // Value placeholder
+
+  // Row 4: Tax Number
+  sheet.getRange('A' + (detailsStartRow + 3) + ':B' + (detailsStartRow + 3)).merge().setValue('Tax Number:').setFontWeight('bold');
+  sheet.getRange('C' + (detailsStartRow + 3) + ':F' + (detailsStartRow + 3)).merge(); // Value placeholder
+
+  // Row 5: Address
+  sheet.getRange('A' + (detailsStartRow + 4) + ':B' + (detailsStartRow + 4)).merge().setValue('Address:').setFontWeight('bold');
+  sheet.getRange('C' + (detailsStartRow + 4) + ':F' + (detailsStartRow + 4)).merge(); // Value placeholder
+
   currentRow = detailsStartRow + 5;
 
   // Empty row
@@ -202,14 +215,21 @@ function createInvoiceTemplateSheet(ss) {
     .setValue('Bank Details / التفاصيل البنكية')
     .setFontWeight('bold').setBackground('#f5f5f5');
 
-  const bankDetails = [
-    ['Bank:', getSettingValue('Bank Name') || 'Kuveyt Türk', '', '', '', ''],
-    ['IBAN (TRY):', getSettingValue('IBAN TRY') || '', '', '', '', ''],
-    ['IBAN (USD):', getSettingValue('IBAN USD') || '', '', '', '', ''],
-    ['SWIFT:', getSettingValue('SWIFT Code') || 'KTEFTRIS', '', '', '', '']
-  ];
-  sheet.getRange('A' + (bankRow + 1) + ':F' + (bankRow + 4)).setValues(bankDetails);
-  sheet.getRange('A' + (bankRow + 1) + ':A' + (bankRow + 4)).setFontWeight('bold');
+  // Bank row 1
+  sheet.getRange('A' + (bankRow + 1) + ':B' + (bankRow + 1)).merge().setValue('Bank:').setFontWeight('bold');
+  sheet.getRange('C' + (bankRow + 1) + ':F' + (bankRow + 1)).merge().setValue(getSettingValue('Bank Name') || 'Kuveyt Türk');
+
+  // Bank row 2
+  sheet.getRange('A' + (bankRow + 2) + ':B' + (bankRow + 2)).merge().setValue('IBAN (TRY):').setFontWeight('bold');
+  sheet.getRange('C' + (bankRow + 2) + ':F' + (bankRow + 2)).merge().setValue(getSettingValue('IBAN TRY') || '');
+
+  // Bank row 3
+  sheet.getRange('A' + (bankRow + 3) + ':B' + (bankRow + 3)).merge().setValue('IBAN (USD):').setFontWeight('bold');
+  sheet.getRange('C' + (bankRow + 3) + ':F' + (bankRow + 3)).merge().setValue(getSettingValue('IBAN USD') || '');
+
+  // Bank row 4
+  sheet.getRange('A' + (bankRow + 4) + ':B' + (bankRow + 4)).merge().setValue('SWIFT:').setFontWeight('bold');
+  sheet.getRange('C' + (bankRow + 4) + ':F' + (bankRow + 4)).merge().setValue(getSettingValue('SWIFT Code') || 'KTEFTRIS');
 
   // Footer
   const footerRow = bankRow + 6;
@@ -343,6 +363,7 @@ function generateInvoiceFromTransaction() {
     invoiceDate: invoiceDate,
     clientName: firstClientName || (clientData ? clientData.nameEN : ''),
     clientNameAR: clientData ? clientData.nameAR : '',
+    companyType: clientData ? clientData.companyType : '',
     taxNumber: clientData ? clientData.taxNumber : '',
     address: clientData ? clientData.address : '',
     period: period,
@@ -523,6 +544,7 @@ function generateCustomInvoice() {
     invoiceDate: invoiceDate,
     clientName: clientData.nameEN,
     clientNameAR: clientData.nameAR || '',
+    companyType: clientData.companyType || '',
     taxNumber: clientData.taxNumber || '',
     address: clientData.address || '',
     period: period,
@@ -660,6 +682,7 @@ function generateAllMonthlyInvoices() {
       invoiceDate: invoiceDate,
       clientName: client.nameEN,
       clientNameAR: clientData ? clientData.nameAR : '',
+      companyType: clientData ? clientData.companyType : '',
       taxNumber: clientData ? clientData.taxNumber : '',
       address: clientData ? clientData.address : '',
       period: period,
@@ -739,23 +762,23 @@ function fillInvoiceTemplate(ss, data) {
 
   // Details start row (7 without logo, 8 with logo)
   const detailsStartRow = 7 + rowOffset;
-  // Items start row (14 without logo, 15 with logo)
+  // Items start row (14 without logo, 15 with logo) - 5 detail rows now (no Period)
   const itemsStartRow = 14 + rowOffset;
-  // Totals row (25 without logo, 26 with logo) - updated for 6 columns
+  // Totals row (26 without logo, 27 with logo)
   const totalsStartRow = 26 + rowOffset;
 
-  // Clear previous data (6 columns now)
-  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  // Clear previous data (5 detail rows now - no Period)
+  sheet.getRange('C' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
   sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
   sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
 
-  // Invoice details
-  sheet.getRange('B' + detailsStartRow).setValue(data.invoiceNo);
-  sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
-  sheet.getRange('B' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
-  sheet.getRange('B' + (detailsStartRow + 2)).setValue(data.taxNumber || '');
-  sheet.getRange('B' + (detailsStartRow + 3)).setValue(data.address || '');
-  sheet.getRange('B' + (detailsStartRow + 4)).setValue(data.period || '');
+  // Invoice details (values in column C for merged cells, F for date)
+  sheet.getRange('C' + detailsStartRow).setValue(data.invoiceNo);  // Invoice No value in C-D merged
+  sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));  // Date value
+  sheet.getRange('C' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));  // Client in C-F merged
+  sheet.getRange('C' + (detailsStartRow + 2)).setValue(data.companyType || '');  // Company Type in C-F merged
+  sheet.getRange('C' + (detailsStartRow + 3)).setValue(data.taxNumber || '');  // Tax Number in C-F merged
+  sheet.getRange('C' + (detailsStartRow + 4)).setValue(data.address || '');  // Address in C-F merged
 
   // Items - 6 columns: #, Item, Description, Qty, Unit Price, Total
   if (data.items && data.items.length > 0) {
@@ -965,7 +988,7 @@ function clearInvoiceTemplate() {
   const itemsStartRow = 14 + rowOffset;
   const totalsStartRow = 26 + rowOffset;
 
-  sheet.getRange('B' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
+  sheet.getRange('C' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
   sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
   sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
 
