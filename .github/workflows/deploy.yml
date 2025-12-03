@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'src/**'
+      - '.clasp.json'
 
 jobs:
   deploy:
@@ -27,15 +28,11 @@ jobs:
         run: |
           echo '${{ secrets.CLASP_TOKEN }}' > ~/.clasprc.json
 
-      - name: Create .clasp.json
-        run: |
-          echo '{"scriptId":"${{ secrets.SCRIPT_ID }}","rootDir":"src"}' > .clasp.json
-
       - name: Push to Google Apps Script
         run: clasp push --force
 
-      - name: Deploy version (optional)
+      - name: Create new version
         run: |
-          VERSION=$(date +"%Y-%m-%d %H:%M")
+          VERSION="Auto-deploy $(date +'%Y-%m-%d %H:%M')"
           clasp version "$VERSION"
         continue-on-error: true
