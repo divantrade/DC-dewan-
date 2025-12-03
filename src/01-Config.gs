@@ -1,11 +1,11 @@
 // ╔════════════════════════════════════════════════════════════════════════════╗
-// ║                    DC CONSULTING ACCOUNTING SYSTEM v3.0                     ║
+// ║                    DC CONSULTING ACCOUNTING SYSTEM v3.1                     ║
 // ║                              Part 1 of 9                                    ║
 // ║                    Core + Menu + Config + Security                          ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 // ==================== GLOBAL CONSTANTS ====================
-const SYSTEM_VERSION = '3.0';
+const SYSTEM_VERSION = '3.1';
 const DEFAULT_PASSWORD = 'DC2025';
 
 const CURRENCIES = ['TRY', 'USD', 'EUR', 'SAR', 'EGP', 'AED', 'GBP'];
