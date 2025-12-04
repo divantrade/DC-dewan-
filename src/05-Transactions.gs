@@ -638,6 +638,9 @@ function onEdit(e) {
               : nameEN;
             sheet.getRange(row, 9).setValue(partyName);
 
+            // تحديث Show in Statement تلقائياً
+            updateShowInStatement(sheet, row);
+
             break;
           }
         }
@@ -669,7 +672,10 @@ function onEdit(e) {
               ? nameEN + ' (' + nameAR + ')'
               : nameEN;
             sheet.getRange(row, 9).setValue(partyName);
-            
+
+            // تحديث Show in Statement تلقائياً
+            updateShowInStatement(sheet, row);
+
             break;
           }
         }
@@ -706,6 +712,12 @@ function onEdit(e) {
       const amount = sheet.getRange(row, 11).getValue() || 0;
       const paid = sheet.getRange(row, 21).getValue() || 0;
       sheet.getRange(row, 22).setValue(amount - paid);
+    }
+
+    // ───── Client Name (F) / Party Name (I) → Show in Statement (Y) ─────
+    // التحقق من توافق اسم العميل واسم الطرف
+    if (col === 6 || col === 9) {
+      updateShowInStatement(sheet, row);
     }
   }
   
@@ -835,6 +847,39 @@ function applyAllPaymentColors() {
     );
   } catch (e) {
     // Running from script editor
+  }
+}
+
+// ==================== 8.5 UPDATE SHOW IN STATEMENT ====================
+/**
+ * تحديث عمود Show in Statement بناءً على توافق اسم العميل واسم الطرف
+ * إذا كان هناك توافق → Yes (نعم)
+ * إذا كان هناك اختلاف → No (لا)
+ */
+function updateShowInStatement(sheet, row) {
+  const clientName = sheet.getRange(row, 6).getValue(); // Column F - Client Name
+  const partyName = sheet.getRange(row, 9).getValue();  // Column I - Party Name
+
+  // إذا لم يكن هناك اسم عميل أو اسم طرف، لا تفعل شيء
+  if (!clientName || !partyName) return;
+
+  const clientNameStr = clientName.toString().trim().toLowerCase();
+  const partyNameStr = partyName.toString().trim().toLowerCase();
+
+  // التحقق من التوافق
+  // يعتبر متوافق إذا:
+  // 1. الاسمين متطابقين
+  // 2. اسم العميل موجود داخل اسم الطرف (مثل: "ABC" موجود في "ABC (شركة أ ب ج)")
+  // 3. اسم الطرف موجود داخل اسم العميل
+  const isMatch = clientNameStr === partyNameStr ||
+                  partyNameStr.includes(clientNameStr) ||
+                  clientNameStr.includes(partyNameStr);
+
+  // تعيين Show in Statement (Column Y = 25)
+  if (isMatch) {
+    sheet.getRange(row, 25).setValue('Yes (نعم)');
+  } else {
+    sheet.getRange(row, 25).setValue('No (لا)');
   }
 }
 
