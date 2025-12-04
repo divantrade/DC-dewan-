@@ -58,10 +58,10 @@ function createInvoiceLogSheet(ss) {
   sheet.getRange(2, 12, lastRow, 1).setDataValidation(emailStatusRule);
   
   // Number formats
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yy');
   sheet.getRange(2, 7, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
-  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('dd.mm.yy HH:mm');
+  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yy HH:mm');
   
   // Conditional formatting
   const statusRange = sheet.getRange(2, 9, lastRow, 1);
