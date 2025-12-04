@@ -26,7 +26,7 @@ function createSettingsSheet(ss) {
     ['Company Address', 'Beycenter, Cumhuriyet, 1991. Sk., 34515 Esenyurt/İstanbul'],
     ['Company Phone', '+90 (552) 740 60 13'],
     ['Company Email', 'sales@aldewan.net'],
-    ['Company Logo URL', ''],
+    ['Company Logo URL', 'https://drive.google.com/file/d/1retRm0IhrHep3s4BB0bIAhyvpdBIrSxm/view?usp=sharing'],
     ['Tax Office', 'Gunesli'],
     ['Tax Number', '0471079224'],
     ['', ''],
