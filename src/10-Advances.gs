@@ -61,12 +61,12 @@ function createAdvancesSheet(ss) {
   sheet.getRange(2, 10, lastRow, 1).setDataValidation(statusValidation);
 
   // Number formats
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yy');
   sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('yyyy-mm-dd');
-  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('dd.mm.yy HH:mm');
 
   // Conditional formatting for Status
   const statusRange = sheet.getRange(2, 10, lastRow, 1);
@@ -144,9 +144,9 @@ function createAdvanceExpensesSheet(ss) {
   sheet.getRange(2, 9, lastRow, 1).setDataValidation(categoryValidation);
 
   // Number formats
-  sheet.getRange(2, 3, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 3, lastRow, 1).setNumberFormat('dd.mm.yy');
   sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('dd.mm.yy HH:mm');
 
   sheet.setFrozenRows(1);
 

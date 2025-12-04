@@ -159,11 +159,11 @@ function createTransactionsSheet(ss) {
   sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
   
   // ===== Number Formats =====
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yy');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 13, lastRow, 1).setNumberFormat('#,##0.0000');
   sheet.getRange(2, 14, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('dd.mm.yy');
   sheet.getRange(2, 21, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 22, lastRow, 1).setNumberFormat('#,##0.00');
   
@@ -832,36 +832,65 @@ function addTransaction() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
   const sheet = ss.getSheetByName('Transactions');
-  
+
   if (!sheet) {
     ui.alert('❌ Transactions sheet not found!');
     return;
   }
-  
+
   ss.setActiveSheet(sheet);
   const lastRow = sheet.getLastRow() + 1;
-  
+
+  // Ask user for date
+  const todayFormatted = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yy');
+  const dateResponse = ui.prompt(
+    '📅 تاريخ المعاملة (Transaction Date)',
+    'أدخل التاريخ بصيغة dd.mm.yy\n' +
+    'مثال: 15.03.24\n\n' +
+    'اتركه فارغاً لاستخدام تاريخ اليوم (' + todayFormatted + ')',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (dateResponse.getSelectedButton() === ui.Button.CANCEL) {
+    return;
+  }
+
+  let transactionDate = new Date();
+  const dateInput = dateResponse.getResponseText().trim();
+
+  if (dateInput !== '') {
+    // Parse custom date in dd.mm.yy format
+    const parsedDate = parseCustomDate(dateInput);
+    if (parsedDate) {
+      transactionDate = parsedDate;
+    } else {
+      ui.alert('❌ صيغة التاريخ غير صحيحة!\n\nالرجاء استخدام الصيغة: dd.mm.yy\nمثال: 15.03.24');
+      return;
+    }
+  }
+
   // Set auto number
   sheet.getRange(lastRow, 1).setValue(lastRow - 1);
-  
-  // Set default date
-  sheet.getRange(lastRow, 2).setValue(new Date());
-  
+
+  // Set date with dd.mm.yy format
+  sheet.getRange(lastRow, 2).setValue(transactionDate).setNumberFormat('dd.mm.yy');
+
   // Set defaults
   sheet.getRange(lastRow, 12).setValue('TRY');
   sheet.getRange(lastRow, 13).setValue(1);
   sheet.getRange(lastRow, 19).setValue('Pending (معلق)');
   sheet.getRange(lastRow, 25).setValue('Yes (نعم)');
-  
+
   // Select first input cell
   sheet.setActiveRange(sheet.getRange(lastRow, 3));
-  
+
+  const displayDate = Utilities.formatDate(transactionDate, Session.getScriptTimeZone(), 'dd.MM.yy');
   ui.alert(
     '➕ Add Transaction (إضافة معاملة)\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Row #' + (lastRow - 1) + ' is ready.\n\n' +
     'Defaults:\n' +
-    '• Date: Today\n' +
+    '• Date: ' + displayDate + '\n' +
     '• Currency: TRY\n' +
     '• Exchange Rate: 1\n' +
     '• Status: Pending\n' +
@@ -870,6 +899,42 @@ function addTransaction() {
     '• اختر Client Code → الاسم يُملأ تلقائياً\n' +
     '• اختر Party Type → يتغير dropdown الأسماء'
   );
+}
+
+/**
+ * Parse date from dd.mm.yy format
+ * @param {string} dateStr - Date string in dd.mm.yy format
+ * @returns {Date|null} - Parsed date or null if invalid
+ */
+function parseCustomDate(dateStr) {
+  // Support both dd.mm.yy and dd.mm.yyyy formats
+  const regex = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/;
+  const match = dateStr.match(regex);
+
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
+  let year = parseInt(match[3], 10);
+
+  // Handle 2-digit year (assume 20xx for years 00-99)
+  if (year < 100) {
+    year += 2000;
+  }
+
+  // Validate date parts
+  if (day < 1 || day > 31 || month < 0 || month > 11) {
+    return null;
+  }
+
+  const date = new Date(year, month, day);
+
+  // Verify the date is valid (e.g., not Feb 30)
+  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+    return null;
+  }
+
+  return date;
 }
 function generateMissingTransactionNumbers() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
