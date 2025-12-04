@@ -133,6 +133,56 @@ function addNewClient() {
   );
 }
 
+/**
+ * توليد الأكواد المفقودة للعملاء
+ * Generate missing codes for clients that have data but no code
+ */
+function generateMissingClientCodes() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Clients');
+
+  if (!sheet) {
+    ui.alert('⚠️ Clients sheet not found!');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    ui.alert('ℹ️ No client data found.');
+    return;
+  }
+
+  let generatedCount = 0;
+  const codeCol = 1; // Column A
+  const nameCol = 2; // Column B (Company Name EN)
+
+  for (let i = 1; i < data.length; i++) {
+    const code = data[i][codeCol - 1];
+    const name = data[i][nameCol - 1];
+
+    // If no code but has name, generate code
+    if ((!code || code.toString().trim() === '') && name && name.toString().trim() !== '') {
+      const newCode = generateNextCode('CLT', sheet, codeCol);
+      sheet.getRange(i + 1, codeCol).setValue(newCode);
+      generatedCount++;
+
+      // Update data array to avoid duplicate codes
+      data[i][codeCol - 1] = newCode;
+    }
+  }
+
+  if (generatedCount > 0) {
+    ui.alert(
+      '✅ تم توليد الأكواد بنجاح!\n\n' +
+      'Generated ' + generatedCount + ' client code(s).\n\n' +
+      'تم توليد ' + generatedCount + ' كود للعملاء.'
+    );
+  } else {
+    ui.alert('ℹ️ All clients already have codes.\n\nجميع العملاء لديهم أكواد بالفعل.');
+  }
+}
+
 function getClientData(clientCode) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Clients');

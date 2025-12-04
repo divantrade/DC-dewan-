@@ -59,6 +59,8 @@ function onOpen() {
       .addItem('➕ Add Vendor (إضافة مورد)', 'addNewVendor')
       .addItem('➕ Add Employee (إضافة موظف)', 'addNewEmployee')
       .addSeparator()
+      .addItem('🔢 Generate Missing Codes (توليد الأكواد)', 'generateMissingClientCodes')
+      .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
       .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
       .addSeparator()
