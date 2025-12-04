@@ -219,46 +219,60 @@ function refreshClientDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const transSheet = ss.getSheetByName('Transactions');
   const clientsSheet = ss.getSheetByName('Clients');
-  
+
   if (!transSheet || !clientsSheet) return;
-  
+
   const lastClientRow = clientsSheet.getLastRow();
   if (lastClientRow < 2) return;
-  
+
   const lastRow = 1000;
-  
+
   // جمع بيانات العملاء النشطين
-  const clientData = clientsSheet.getRange(2, 1, lastClientRow - 1, 16).getValues();
-  
+  const clientData = clientsSheet.getRange(2, 1, lastClientRow - 1, 17).getValues();
+
   const clientCodes = [];
-  const clientNamesEN = [];
-  
+  const clientNames = []; // سيشمل كل الأسماء (EN, AR, TR)
+
   clientData.forEach(row => {
     const code = row[0];      // A = Code
     const nameEN = row[1];    // B = Name EN
-    const status = row[15];   // P = Status
-    
-    if (code && nameEN && status === 'Active') {
+    const nameAR = row[2];    // C = Name AR
+    const nameTR = row[3];    // D = Name TR
+    const status = row[16];   // Q = Status (column 17)
+
+    if (code && status === 'Active') {
       clientCodes.push(code);
-      clientNamesEN.push(nameEN);
+
+      // إضافة جميع الأسماء المتاحة للـ dropdown
+      if (nameEN && nameEN.toString().trim() !== '') {
+        clientNames.push(nameEN);
+      }
+      if (nameAR && nameAR.toString().trim() !== '' && nameAR !== nameEN) {
+        clientNames.push(nameAR);
+      }
+      if (nameTR && nameTR.toString().trim() !== '' && nameTR !== nameEN && nameTR !== nameAR) {
+        clientNames.push(nameTR);
+      }
     }
   });
-  
+
   if (clientCodes.length === 0) return;
-  
+
   // Client Code Dropdown (Column E)
   const codeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(clientCodes, true)
     .setAllowInvalid(true)
     .build();
   transSheet.getRange(2, 5, lastRow, 1).setDataValidation(codeRule);
-  
-  // Client Name Dropdown (Column F)
-  const nameRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(clientNamesEN, true)
-    .setAllowInvalid(true)
-    .build();
-  transSheet.getRange(2, 6, lastRow, 1).setDataValidation(nameRule);
+
+  // Client Name Dropdown (Column F) - يشمل كل الأسماء
+  if (clientNames.length > 0) {
+    const nameRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(clientNames, true)
+      .setAllowInvalid(true)
+      .build();
+    transSheet.getRange(2, 6, lastRow, 1).setDataValidation(nameRule);
+  }
 }
 
 // ==================== 3. REFRESH ITEMS DROPDOWN ====================
