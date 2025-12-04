@@ -70,8 +70,8 @@ function createClientsSheet(ss) {
 
   // Number formats
   sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yy');
-  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   
   // Conditional formatting for Status (column Q = 17)
   const statusRange = sheet.getRange(2, 17, lastRow, 1);
@@ -131,6 +131,56 @@ function addNewClient() {
     '• Monthly Fee\n' +
     '• Folder ID (for invoices)'
   );
+}
+
+/**
+ * توليد الأكواد المفقودة للعملاء
+ * Generate missing codes for clients that have data but no code
+ */
+function generateMissingClientCodes() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Clients');
+
+  if (!sheet) {
+    ui.alert('⚠️ Clients sheet not found!');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    ui.alert('ℹ️ No client data found.');
+    return;
+  }
+
+  let generatedCount = 0;
+  const codeCol = 1; // Column A
+  const nameCol = 2; // Column B (Company Name EN)
+
+  for (let i = 1; i < data.length; i++) {
+    const code = data[i][codeCol - 1];
+    const name = data[i][nameCol - 1];
+
+    // If no code but has name, generate code
+    if ((!code || code.toString().trim() === '') && name && name.toString().trim() !== '') {
+      const newCode = generateNextCode('CLT', sheet, codeCol);
+      sheet.getRange(i + 1, codeCol).setValue(newCode);
+      generatedCount++;
+
+      // Update data array to avoid duplicate codes
+      data[i][codeCol - 1] = newCode;
+    }
+  }
+
+  if (generatedCount > 0) {
+    ui.alert(
+      '✅ تم توليد الأكواد بنجاح!\n\n' +
+      'Generated ' + generatedCount + ' client code(s).\n\n' +
+      'تم توليد ' + generatedCount + ' كود للعملاء.'
+    );
+  } else {
+    ui.alert('ℹ️ All clients already have codes.\n\nجميع العملاء لديهم أكواد بالفعل.');
+  }
 }
 
 function getClientData(clientCode) {
@@ -285,7 +335,7 @@ function createVendorsSheet(ss) {
     .build();
   sheet.getRange(2, 16, lastRow, 1).setDataValidation(statusValidation);
   
-  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -394,9 +444,9 @@ function createEmployeesSheet(ss) {
   sheet.getRange(2, 15, lastRow, 1).setDataValidation(statusValidation);
   
   // Number formats
-  sheet.getRange(2, 10, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 10, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   
   sheet.setFrozenRows(1);
   
