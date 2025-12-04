@@ -142,7 +142,7 @@ function createHolidaysSheet(ss) {
   sheet.setColumnWidth(5, 100);
   sheet.setColumnWidth(6, 60);
   
-  sheet.getRange(2, 1, holidays2025.length, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 1, holidays2025.length, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;

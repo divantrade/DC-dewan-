@@ -34,7 +34,7 @@ function createEmailLogSheet(ss) {
   const widths = [150, 120, 90, 180, 200, 80, 80, 300, 80, 250];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   
-  sheet.getRange(2, 1, 500, 1).setNumberFormat('dd.mm.yy HH:mm:ss');
+  sheet.getRange(2, 1, 500, 1).setNumberFormat('dd.mm.yyyy HH:mm:ss');
   
   // Conditional formatting
   const statusRange = sheet.getRange(2, 7, 500, 1);
@@ -961,7 +961,7 @@ function logAlert(type, message, severity) {
   
   const lastRow = sheet.getLastRow() + 1;
   
-  sheet.getRange(lastRow, 1).setValue(new Date()).setNumberFormat('dd.mm.yy HH:mm');
+  sheet.getRange(lastRow, 1).setValue(new Date()).setNumberFormat('dd.mm.yyyy HH:mm');
   sheet.getRange(lastRow, 2).setValue(type);
   sheet.getRange(lastRow, 3).setValue(message);
   sheet.getRange(lastRow, 4).setValue(severity || 'Info');

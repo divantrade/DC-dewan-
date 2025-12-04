@@ -159,11 +159,11 @@ function createTransactionsSheet(ss) {
   sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
   
   // ===== Number Formats =====
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 13, lastRow, 1).setNumberFormat('#,##0.0000');
   sheet.getRange(2, 14, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 21, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 22, lastRow, 1).setNumberFormat('#,##0.00');
   
@@ -842,11 +842,11 @@ function addTransaction() {
   const lastRow = sheet.getLastRow() + 1;
 
   // Ask user for date
-  const todayFormatted = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yy');
+  const todayFormatted = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy');
   const dateResponse = ui.prompt(
     '📅 تاريخ المعاملة (Transaction Date)',
-    'أدخل التاريخ بصيغة dd.mm.yy\n' +
-    'مثال: 15.03.24\n\n' +
+    'أدخل التاريخ بصيغة dd.mm.yyyy\n' +
+    'مثال: 15.03.2024\n\n' +
     'اتركه فارغاً لاستخدام تاريخ اليوم (' + todayFormatted + ')',
     ui.ButtonSet.OK_CANCEL
   );
@@ -859,12 +859,12 @@ function addTransaction() {
   const dateInput = dateResponse.getResponseText().trim();
 
   if (dateInput !== '') {
-    // Parse custom date in dd.mm.yy format
+    // Parse custom date in dd.mm.yyyy format
     const parsedDate = parseCustomDate(dateInput);
     if (parsedDate) {
       transactionDate = parsedDate;
     } else {
-      ui.alert('❌ صيغة التاريخ غير صحيحة!\n\nالرجاء استخدام الصيغة: dd.mm.yy\nمثال: 15.03.24');
+      ui.alert('❌ صيغة التاريخ غير صحيحة!\n\nالرجاء استخدام الصيغة: dd.mm.yyyy\nمثال: 15.03.2024');
       return;
     }
   }
@@ -872,8 +872,8 @@ function addTransaction() {
   // Set auto number
   sheet.getRange(lastRow, 1).setValue(lastRow - 1);
 
-  // Set date with dd.mm.yy format
-  sheet.getRange(lastRow, 2).setValue(transactionDate).setNumberFormat('dd.mm.yy');
+  // Set date with dd.mm.yyyy format
+  sheet.getRange(lastRow, 2).setValue(transactionDate).setNumberFormat('dd.mm.yyyy');
 
   // Set defaults
   sheet.getRange(lastRow, 12).setValue('TRY');
@@ -884,7 +884,7 @@ function addTransaction() {
   // Select first input cell
   sheet.setActiveRange(sheet.getRange(lastRow, 3));
 
-  const displayDate = Utilities.formatDate(transactionDate, Session.getScriptTimeZone(), 'dd.MM.yy');
+  const displayDate = Utilities.formatDate(transactionDate, Session.getScriptTimeZone(), 'dd.MM.yyyy');
   ui.alert(
     '➕ Add Transaction (إضافة معاملة)\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
@@ -902,12 +902,12 @@ function addTransaction() {
 }
 
 /**
- * Parse date from dd.mm.yy format
- * @param {string} dateStr - Date string in dd.mm.yy format
+ * Parse date from dd.mm.yyyy format
+ * @param {string} dateStr - Date string in dd.mm.yyyy format (also supports dd.mm.yy)
  * @returns {Date|null} - Parsed date or null if invalid
  */
 function parseCustomDate(dateStr) {
-  // Support both dd.mm.yy and dd.mm.yyyy formats
+  // Support both dd.mm.yyyy and dd.mm.yy formats
   const regex = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/;
   const match = dateStr.match(regex);
 

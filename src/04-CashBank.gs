@@ -57,7 +57,7 @@ function createCashBoxesDatabase(ss) {
   sheet.getRange(2, 10, 100, 1).setDataValidation(sheetCreatedRule);
   
   sheet.getRange(2, 6, 100, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 7, 100, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 7, 100, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -189,7 +189,7 @@ function createBankAccountsDatabase(ss) {
   sheet.getRange(2, 11, 100, 1).setDataValidation(statusRule);
   
   sheet.getRange(2, 9, 100, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 10, 100, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 10, 100, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -312,7 +312,7 @@ function createSingleCashSheet(ss, cashName, currency, openingBalance) {
     .setFontWeight('bold');
   
   // Opening Balance row
-  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yy');
+  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yyyy');
   sheet.getRange('B4').setValue('Opening Balance (رصيد افتتاحي)');
   sheet.getRange('F4').setValue(openingBalance).setNumberFormat('#,##0.00');
   sheet.getRange('G4').setValue('IN');
@@ -336,7 +336,7 @@ function createSingleCashSheet(ss, cashName, currency, openingBalance) {
       .whenTextEqualTo('OUT').setBackground(COLORS.danger).setRanges([dirRange]).build()
   ]);
 
-  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yy');
+  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yyyy');
   sheet.getRange('F4:F1000').setNumberFormat('#,##0.00');
   sheet.getRange('H4:H1000').setNumberFormat('#,##0.00');
   sheet.setFrozenRows(3);
@@ -379,7 +379,7 @@ function createSingleBankSheet(ss, accountName, currency, openingBalance) {
     .setFontWeight('bold');
   
   // Opening Balance row
-  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yy');
+  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yyyy');
   sheet.getRange('B4').setValue('Opening Balance (رصيد افتتاحي)');
   sheet.getRange('F4').setValue(openingBalance).setNumberFormat('#,##0.00');
   sheet.getRange('G4').setValue('IN');
@@ -400,7 +400,7 @@ function createSingleBankSheet(ss, accountName, currency, openingBalance) {
       .whenTextEqualTo('OUT').setBackground(COLORS.danger).setRanges([dirRange]).build()
   ]);
 
-  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yy');
+  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yyyy');
   sheet.getRange('F4:F1000').setNumberFormat('#,##0.00');
   sheet.getRange('H4:H1000').setNumberFormat('#,##0.00');
   sheet.setFrozenRows(3);
@@ -545,7 +545,7 @@ function addCashBankEntry(sheetName, date, description, reference, party, transC
   
   const lastRow = sheet.getLastRow() + 1;
   
-  sheet.getRange(lastRow, 1).setValue(date).setNumberFormat('dd.mm.yy');
+  sheet.getRange(lastRow, 1).setValue(date).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(lastRow, 2).setValue(description);
   sheet.getRange(lastRow, 3).setValue(reference);
   sheet.getRange(lastRow, 4).setValue(party);

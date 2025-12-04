@@ -70,8 +70,8 @@ function createClientsSheet(ss) {
 
   // Number formats
   sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yy');
-  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   
   // Conditional formatting for Status (column Q = 17)
   const statusRange = sheet.getRange(2, 17, lastRow, 1);
@@ -285,7 +285,7 @@ function createVendorsSheet(ss) {
     .build();
   sheet.getRange(2, 16, lastRow, 1).setDataValidation(statusValidation);
   
-  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -394,9 +394,9 @@ function createEmployeesSheet(ss) {
   sheet.getRange(2, 15, lastRow, 1).setDataValidation(statusValidation);
   
   // Number formats
-  sheet.getRange(2, 10, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 10, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yy');
+  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   
   sheet.setFrozenRows(1);
   
