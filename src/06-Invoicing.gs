@@ -242,6 +242,55 @@ function createInvoiceTemplateSheet(ss) {
   return sheet;
 }
 
+// ==================== 2.5 UPDATE LOGO IN INVOICE TEMPLATE ====================
+/**
+ * تحديث/إضافة اللوجو في نموذج الفاتورة الموجود
+ */
+function updateInvoiceLogo() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Invoice Template');
+
+  if (!sheet) {
+    ui.alert('❌ Invoice Template not found!\n\nRun Setup System first.');
+    return;
+  }
+
+  // Get logo URL from settings
+  const companyLogo = getSettingValue('Company Logo URL') || '';
+
+  if (!companyLogo || companyLogo.trim() === '') {
+    ui.alert('❌ No logo URL found in Settings!\n\nAdd "Company Logo URL" in Settings sheet first.');
+    return;
+  }
+
+  let logoUrl = companyLogo.trim();
+
+  // Handle Google Drive sharing links
+  if (logoUrl.includes('drive.google.com/file/d/')) {
+    const fileId = logoUrl.match(/\/d\/([^\/]+)/);
+    if (fileId && fileId[1]) {
+      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+    }
+  } else if (logoUrl.includes('drive.google.com/open?id=')) {
+    const fileId = logoUrl.match(/id=([^&]+)/);
+    if (fileId && fileId[1]) {
+      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+    }
+  }
+
+  // Insert row at top for logo
+  sheet.insertRowBefore(1);
+
+  // Add logo
+  sheet.getRange('A1:F1').merge();
+  sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+  sheet.setRowHeight(1, 70);
+  sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  ui.alert('✅ Logo added successfully!\n\nتم إضافة اللوجو بنجاح!');
+}
+
 // ==================== 3. GET NEXT INVOICE NUMBER ====================
 function getNextInvoiceNumber() {
   const prefix = getSettingValue('Invoice Prefix') || 'INV-';
