@@ -51,6 +51,7 @@ function onOpen() {
       .addItem('📧 Send Pending Invoices', 'sendPendingInvoices')
       .addItem('👁️ Preview Invoice', 'previewInvoice')
       .addSeparator()
+      .addItem('🖼️ Add Logo to Template', 'updateInvoiceLogo')
       .addItem('📊 Invoice Log', 'showInvoiceLog'))
     
     // Clients & Parties
