@@ -159,11 +159,11 @@ function createTransactionsSheet(ss) {
   sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
   
   // ===== Number Formats =====
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 13, lastRow, 1).setNumberFormat('#,##0.0000');
   sheet.getRange(2, 14, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 21, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 22, lastRow, 1).setNumberFormat('#,##0.00');
   
@@ -219,46 +219,60 @@ function refreshClientDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const transSheet = ss.getSheetByName('Transactions');
   const clientsSheet = ss.getSheetByName('Clients');
-  
+
   if (!transSheet || !clientsSheet) return;
-  
+
   const lastClientRow = clientsSheet.getLastRow();
   if (lastClientRow < 2) return;
-  
+
   const lastRow = 1000;
-  
+
   // جمع بيانات العملاء النشطين
-  const clientData = clientsSheet.getRange(2, 1, lastClientRow - 1, 16).getValues();
-  
+  const clientData = clientsSheet.getRange(2, 1, lastClientRow - 1, 17).getValues();
+
   const clientCodes = [];
-  const clientNamesEN = [];
-  
+  const clientNames = []; // سيشمل كل الأسماء (EN, AR, TR)
+
   clientData.forEach(row => {
     const code = row[0];      // A = Code
     const nameEN = row[1];    // B = Name EN
-    const status = row[15];   // P = Status
-    
-    if (code && nameEN && status === 'Active') {
+    const nameAR = row[2];    // C = Name AR
+    const nameTR = row[3];    // D = Name TR
+    const status = row[16];   // Q = Status (column 17)
+
+    if (code && status === 'Active') {
       clientCodes.push(code);
-      clientNamesEN.push(nameEN);
+
+      // إضافة جميع الأسماء المتاحة للـ dropdown
+      if (nameEN && nameEN.toString().trim() !== '') {
+        clientNames.push(nameEN);
+      }
+      if (nameAR && nameAR.toString().trim() !== '' && nameAR !== nameEN) {
+        clientNames.push(nameAR);
+      }
+      if (nameTR && nameTR.toString().trim() !== '' && nameTR !== nameEN && nameTR !== nameAR) {
+        clientNames.push(nameTR);
+      }
     }
   });
-  
+
   if (clientCodes.length === 0) return;
-  
+
   // Client Code Dropdown (Column E)
   const codeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(clientCodes, true)
     .setAllowInvalid(true)
     .build();
   transSheet.getRange(2, 5, lastRow, 1).setDataValidation(codeRule);
-  
-  // Client Name Dropdown (Column F)
-  const nameRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(clientNamesEN, true)
-    .setAllowInvalid(true)
-    .build();
-  transSheet.getRange(2, 6, lastRow, 1).setDataValidation(nameRule);
+
+  // Client Name Dropdown (Column F) - يشمل كل الأسماء
+  if (clientNames.length > 0) {
+    const nameRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(clientNames, true)
+      .setAllowInvalid(true)
+      .build();
+    transSheet.getRange(2, 6, lastRow, 1).setDataValidation(nameRule);
+  }
 }
 
 // ==================== 3. REFRESH ITEMS DROPDOWN ====================
@@ -624,6 +638,9 @@ function onEdit(e) {
               : nameEN;
             sheet.getRange(row, 9).setValue(partyName);
 
+            // تحديث Show in Statement تلقائياً
+            updateShowInStatement(sheet, row);
+
             break;
           }
         }
@@ -655,7 +672,10 @@ function onEdit(e) {
               ? nameEN + ' (' + nameAR + ')'
               : nameEN;
             sheet.getRange(row, 9).setValue(partyName);
-            
+
+            // تحديث Show in Statement تلقائياً
+            updateShowInStatement(sheet, row);
+
             break;
           }
         }
@@ -692,6 +712,12 @@ function onEdit(e) {
       const amount = sheet.getRange(row, 11).getValue() || 0;
       const paid = sheet.getRange(row, 21).getValue() || 0;
       sheet.getRange(row, 22).setValue(amount - paid);
+    }
+
+    // ───── Client Name (F) / Party Name (I) → Show in Statement (Y) ─────
+    // التحقق من توافق اسم العميل واسم الطرف
+    if (col === 6 || col === 9) {
+      updateShowInStatement(sheet, row);
     }
   }
   
@@ -824,6 +850,39 @@ function applyAllPaymentColors() {
   }
 }
 
+// ==================== 8.5 UPDATE SHOW IN STATEMENT ====================
+/**
+ * تحديث عمود Show in Statement بناءً على توافق اسم العميل واسم الطرف
+ * إذا كان هناك توافق → Yes (نعم)
+ * إذا كان هناك اختلاف → No (لا)
+ */
+function updateShowInStatement(sheet, row) {
+  const clientName = sheet.getRange(row, 6).getValue(); // Column F - Client Name
+  const partyName = sheet.getRange(row, 9).getValue();  // Column I - Party Name
+
+  // إذا لم يكن هناك اسم عميل أو اسم طرف، لا تفعل شيء
+  if (!clientName || !partyName) return;
+
+  const clientNameStr = clientName.toString().trim().toLowerCase();
+  const partyNameStr = partyName.toString().trim().toLowerCase();
+
+  // التحقق من التوافق
+  // يعتبر متوافق إذا:
+  // 1. الاسمين متطابقين
+  // 2. اسم العميل موجود داخل اسم الطرف (مثل: "ABC" موجود في "ABC (شركة أ ب ج)")
+  // 3. اسم الطرف موجود داخل اسم العميل
+  const isMatch = clientNameStr === partyNameStr ||
+                  partyNameStr.includes(clientNameStr) ||
+                  clientNameStr.includes(partyNameStr);
+
+  // تعيين Show in Statement (Column Y = 25)
+  if (isMatch) {
+    sheet.getRange(row, 25).setValue('Yes (نعم)');
+  } else {
+    sheet.getRange(row, 25).setValue('No (لا)');
+  }
+}
+
 // ==================== 9. ADD TRANSACTION ====================
 /**
  * إضافة معاملة جديدة
@@ -832,36 +891,65 @@ function addTransaction() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
   const sheet = ss.getSheetByName('Transactions');
-  
+
   if (!sheet) {
     ui.alert('❌ Transactions sheet not found!');
     return;
   }
-  
+
   ss.setActiveSheet(sheet);
   const lastRow = sheet.getLastRow() + 1;
-  
+
+  // Ask user for date
+  const todayFormatted = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy');
+  const dateResponse = ui.prompt(
+    '📅 تاريخ المعاملة (Transaction Date)',
+    'أدخل التاريخ بصيغة dd.mm.yyyy\n' +
+    'مثال: 15.03.2024\n\n' +
+    'اتركه فارغاً لاستخدام تاريخ اليوم (' + todayFormatted + ')',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (dateResponse.getSelectedButton() === ui.Button.CANCEL) {
+    return;
+  }
+
+  let transactionDate = new Date();
+  const dateInput = dateResponse.getResponseText().trim();
+
+  if (dateInput !== '') {
+    // Parse custom date in dd.mm.yyyy format
+    const parsedDate = parseCustomDate(dateInput);
+    if (parsedDate) {
+      transactionDate = parsedDate;
+    } else {
+      ui.alert('❌ صيغة التاريخ غير صحيحة!\n\nالرجاء استخدام الصيغة: dd.mm.yyyy\nمثال: 15.03.2024');
+      return;
+    }
+  }
+
   // Set auto number
   sheet.getRange(lastRow, 1).setValue(lastRow - 1);
-  
-  // Set default date
-  sheet.getRange(lastRow, 2).setValue(new Date());
-  
+
+  // Set date with dd.mm.yyyy format
+  sheet.getRange(lastRow, 2).setValue(transactionDate).setNumberFormat('dd.mm.yyyy');
+
   // Set defaults
   sheet.getRange(lastRow, 12).setValue('TRY');
   sheet.getRange(lastRow, 13).setValue(1);
   sheet.getRange(lastRow, 19).setValue('Pending (معلق)');
   sheet.getRange(lastRow, 25).setValue('Yes (نعم)');
-  
+
   // Select first input cell
   sheet.setActiveRange(sheet.getRange(lastRow, 3));
-  
+
+  const displayDate = Utilities.formatDate(transactionDate, Session.getScriptTimeZone(), 'dd.MM.yyyy');
   ui.alert(
     '➕ Add Transaction (إضافة معاملة)\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Row #' + (lastRow - 1) + ' is ready.\n\n' +
     'Defaults:\n' +
-    '• Date: Today\n' +
+    '• Date: ' + displayDate + '\n' +
     '• Currency: TRY\n' +
     '• Exchange Rate: 1\n' +
     '• Status: Pending\n' +
@@ -870,6 +958,42 @@ function addTransaction() {
     '• اختر Client Code → الاسم يُملأ تلقائياً\n' +
     '• اختر Party Type → يتغير dropdown الأسماء'
   );
+}
+
+/**
+ * Parse date from dd.mm.yyyy format
+ * @param {string} dateStr - Date string in dd.mm.yyyy format (also supports dd.mm.yy)
+ * @returns {Date|null} - Parsed date or null if invalid
+ */
+function parseCustomDate(dateStr) {
+  // Support both dd.mm.yyyy and dd.mm.yy formats
+  const regex = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/;
+  const match = dateStr.match(regex);
+
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
+  let year = parseInt(match[3], 10);
+
+  // Handle 2-digit year (assume 20xx for years 00-99)
+  if (year < 100) {
+    year += 2000;
+  }
+
+  // Validate date parts
+  if (day < 1 || day > 31 || month < 0 || month > 11) {
+    return null;
+  }
+
+  const date = new Date(year, month, day);
+
+  // Verify the date is valid (e.g., not Feb 30)
+  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+    return null;
+  }
+
+  return date;
 }
 function generateMissingTransactionNumbers() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();

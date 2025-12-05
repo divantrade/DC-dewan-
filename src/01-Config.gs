@@ -51,6 +51,7 @@ function onOpen() {
       .addItem('📧 Send Pending Invoices', 'sendPendingInvoices')
       .addItem('👁️ Preview Invoice', 'previewInvoice')
       .addSeparator()
+      .addItem('🖼️ Add Logo to Template', 'updateInvoiceLogo')
       .addItem('📊 Invoice Log', 'showInvoiceLog'))
     
     // Clients & Parties
@@ -58,6 +59,8 @@ function onOpen() {
       .addItem('➕ Add Client (إضافة عميل)', 'addNewClient')
       .addItem('➕ Add Vendor (إضافة مورد)', 'addNewVendor')
       .addItem('➕ Add Employee (إضافة موظف)', 'addNewEmployee')
+      .addSeparator()
+      .addItem('🔢 Generate Missing Codes (توليد الأكواد)', 'generateMissingClientCodes')
       .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
       .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
