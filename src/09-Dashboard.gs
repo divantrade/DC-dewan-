@@ -21,7 +21,7 @@ function setupSystemSecure() {
     'This will create all required sheets:\n\n' +
     '• Settings & Holidays\n' +
     '• Categories & Movement Types\n' +
-    '• Items Database\n' +
+    '• Items Database & Activities\n' +
     '• Clients, Vendors, Employees\n' +
     '• Cash Boxes & Bank Accounts\n' +
     '• Transactions\n' +
@@ -46,7 +46,8 @@ function setupSystemSecure() {
     createCategoriesSheet(ss);
     createMovementTypesSheet(ss);
     createItemsDatabase(ss);
-    
+    createActivitiesSheet(ss);
+
     // Part 3: Party sheets
     createClientsSheet(ss);
     createVendorsSheet(ss);
@@ -210,7 +211,7 @@ function validateSystem() {
   const ui = SpreadsheetApp.getUi();
   
   const requiredSheets = [
-    'Settings', 'Holidays', 'Categories', 'Movement Types', 'Items Database',
+    'Settings', 'Holidays', 'Categories', 'Movement Types', 'Items Database', 'Activities',
     'Clients', 'Vendors', 'Employees',
     'Cash Boxes', 'Bank Accounts',
     'Transactions', 'Invoice Log', 'Invoice Template',
@@ -400,14 +401,14 @@ function fixTransactionFormulas() {
   let fixed = 0;
   
   for (let row = 2; row <= lastRow; row++) {
-    // Fix Amount TRY (column N)
-    const amount = transSheet.getRange(row, 11).getValue();
-    const rate = transSheet.getRange(row, 13).getValue() || 1;
-    transSheet.getRange(row, 14).setValue(amount * rate);
-    
-    // Fix Remaining (column V)
-    const paid = transSheet.getRange(row, 21).getValue() || 0;
-    transSheet.getRange(row, 22).setValue(amount - paid);
+    // Fix Amount TRY (column O)
+    const amount = transSheet.getRange(row, 12).getValue();
+    const rate = transSheet.getRange(row, 14).getValue() || 1;
+    transSheet.getRange(row, 15).setValue(amount * rate);
+
+    // Fix Remaining (column W)
+    const paid = transSheet.getRange(row, 22).getValue() || 0;
+    transSheet.getRange(row, 23).setValue(amount - paid);
     
     fixed++;
   }
@@ -565,9 +566,9 @@ function syncTransactionsToCashBank() {
   let synced = 0, skipped = 0;
   
   for (let i = 1; i < data.length; i++) {
-    const paymentMethod = data[i][14]; // Column O
-    const cashBank = data[i][15]; // Column P
-    const status = data[i][18]; // Column S
+    const paymentMethod = data[i][15]; // Column P
+    const cashBank = data[i][16]; // Column Q
+    const status = data[i][19]; // Column T
     
     // Skip accruals
     if (!paymentMethod || paymentMethod.includes('Accrual')) {
@@ -614,17 +615,17 @@ function syncTransactionsToCashBank() {
     }
     
     // Add entry
-    const movementType = data[i][2];
+    const movementType = data[i][3];
     const direction = (movementType && movementType.includes('Revenue')) ? 'IN' : 'OUT';
-    
+
     addCashBankEntry(
       sheetName,
       data[i][1], // Date
-      data[i][7] || data[i][6], // Description or Item
-      data[i][16], // Reference
-      data[i][8] || data[i][5], // Party Name or Client Name
+      data[i][8] || data[i][7], // Description or Item
+      data[i][17], // Reference
+      data[i][9] || data[i][6], // Party Name or Client Name
       transCode,
-      data[i][10], // Amount
+      data[i][11], // Amount
       direction
     );
     

@@ -127,6 +127,8 @@ function onOpen() {
       .addItem('⏰ Setup Triggers', 'setupTriggers')
       .addItem('❌ Remove Triggers', 'removeAllTriggers')
       .addSeparator()
+      .addItem('➕ Add Activity (إضافة نشاط)', 'addNewActivity')
+      .addSeparator()
       .addItem('🔑 Change Password', 'changeAdminPassword')
       .addItem('🔄 Reset Password', 'resetPassword')
       .addSeparator()
@@ -155,6 +157,7 @@ function onOpen() {
   // تحديث الـ Dropdowns تلقائياً عند فتح الشيت
   // ══════════════════════════════════════════════════════════════════
   try {
+    refreshActivityDropdown();
     refreshClientDropdowns();
     refreshItemsDropdown();
     refreshCashBankDropdown();
@@ -265,7 +268,7 @@ function getSheetGroups() {
     },
     'databases': {
       name: '🗄️ Databases',
-      patterns: ['Clients', 'Vendors', 'Employees', 'Items Database', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
+      patterns: ['Clients', 'Vendors', 'Employees', 'Items Database', 'Activities', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
     },
     'settings': {
       name: '⚙️ Settings',
