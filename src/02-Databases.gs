@@ -384,6 +384,7 @@ function createItemsDatabase(ss) {
 
 // ==================== 6. ACTIVITIES SHEET ====================
 function createActivitiesSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Activities');
   if (sheet) ss.deleteSheet(sheet);
 
