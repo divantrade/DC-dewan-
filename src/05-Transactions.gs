@@ -63,6 +63,7 @@ const DROPDOWN_VALUES = {
 
 // ==================== 1. CREATE TRANSACTIONS SHEET ====================
 function createTransactionsSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Transactions');
   if (sheet) ss.deleteSheet(sheet);
   
