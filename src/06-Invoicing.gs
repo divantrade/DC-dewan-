@@ -332,16 +332,16 @@ function generateInvoiceFromTransaction() {
   
   for (let i = 0; i < numRows; i++) {
     const row = startRow + i;
-    const rowData = transSheet.getRange(row, 1, 1, 25).getValues()[0];
-    
+    const rowData = transSheet.getRange(row, 1, 1, 26).getValues()[0];
+
     const transCode = rowData[0];
     const transDate = rowData[1];
-    const clientCode = rowData[4];
-    const clientName = rowData[5];
-    const item = rowData[6];
-    const description = rowData[7];
-    const amount = rowData[10] || 0;
-    const rowCurrency = rowData[11] || 'TRY';
+    const clientCode = rowData[5];
+    const clientName = rowData[6];
+    const item = rowData[7];
+    const description = rowData[8];
+    const amount = rowData[11] || 0;
+    const rowCurrency = rowData[12] || 'TRY';
     
     if (!amount || amount === 0) continue;
     
@@ -442,7 +442,7 @@ function generateInvoiceFromTransaction() {
   incrementInvoiceNumber();
   
   selectedData.forEach(d => {
-    transSheet.getRange(d.row, 18).setValue(invoiceNo);
+    transSheet.getRange(d.row, 19).setValue(invoiceNo);
   });
   
   // ===== Save PDF to client folder =====
@@ -636,21 +636,21 @@ function generateCustomInvoice() {
     
     transSheet.getRange(lastRow, 1).setValue(lastRow - 1);
     transSheet.getRange(lastRow, 2).setValue(invoiceDate);
-    transSheet.getRange(lastRow, 3).setValue('Revenue Accrual (استحقاق إيراد)');
-    transSheet.getRange(lastRow, 4).setValue('Service Revenue (إيرادات خدمات)');
-    transSheet.getRange(lastRow, 5).setValue(clientCode);
-    transSheet.getRange(lastRow, 6).setValue(clientData.nameEN);
-    transSheet.getRange(lastRow, 8).setValue(description);
-    transSheet.getRange(lastRow, 9).setValue(clientData.nameEN + ' (' + (clientData.nameAR || clientData.nameEN) + ')');
-    transSheet.getRange(lastRow, 10).setValue('Client (عميل)');
-    transSheet.getRange(lastRow, 11).setValue(totalAmount);
-    transSheet.getRange(lastRow, 12).setValue(currency);
-    transSheet.getRange(lastRow, 13).setValue(1);
-    transSheet.getRange(lastRow, 14).setValue(totalAmount);
-    transSheet.getRange(lastRow, 15).setValue('Accrual (استحقاق)');
-    transSheet.getRange(lastRow, 18).setValue(invoiceNo);
-    transSheet.getRange(lastRow, 19).setValue('Pending (معلق)');
-    transSheet.getRange(lastRow, 25).setValue('Yes (نعم)');
+    transSheet.getRange(lastRow, 4).setValue('Revenue Accrual (استحقاق إيراد)');
+    transSheet.getRange(lastRow, 5).setValue('Service Revenue (إيرادات خدمات)');
+    transSheet.getRange(lastRow, 6).setValue(clientCode);
+    transSheet.getRange(lastRow, 7).setValue(clientData.nameEN);
+    transSheet.getRange(lastRow, 9).setValue(description);
+    transSheet.getRange(lastRow, 10).setValue(clientData.nameEN + ' (' + (clientData.nameAR || clientData.nameEN) + ')');
+    transSheet.getRange(lastRow, 11).setValue('Client (عميل)');
+    transSheet.getRange(lastRow, 12).setValue(totalAmount);
+    transSheet.getRange(lastRow, 13).setValue(currency);
+    transSheet.getRange(lastRow, 14).setValue(1);
+    transSheet.getRange(lastRow, 15).setValue(totalAmount);
+    transSheet.getRange(lastRow, 16).setValue('Accrual (استحقاق)');
+    transSheet.getRange(lastRow, 19).setValue(invoiceNo);
+    transSheet.getRange(lastRow, 20).setValue('Pending (معلق)');
+    transSheet.getRange(lastRow, 26).setValue('Yes (نعم)');
     
     applyPaymentMethodColor(transSheet, lastRow, 'Accrual (استحقاق)');
   }
@@ -668,7 +668,7 @@ function generateCustomInvoice() {
       updateInvoicePDFLink(invoiceNo, pdfResult.url);
       
       if (transSheet && transRow) {
-        transSheet.getRange(transRow, 23).setValue('PDF: ' + pdfResult.url);
+        transSheet.getRange(transRow, 24).setValue('PDF: ' + pdfResult.url);
       }
     } catch (e) {
       console.log('PDF creation error: ' + e.message);
@@ -1055,19 +1055,19 @@ function recordInvoiceTransaction(invoiceNo, clientCode, clientName, amount, cur
   
   transSheet.getRange(lastRow, 1).setValue(lastRow - 1);
   transSheet.getRange(lastRow, 2).setValue(new Date());
-  transSheet.getRange(lastRow, 3).setValue('Revenue Accrual (استحقاق إيراد)');
-  transSheet.getRange(lastRow, 4).setValue('Service Revenue (إيرادات خدمات)');
-  transSheet.getRange(lastRow, 5).setValue(clientCode);
-  transSheet.getRange(lastRow, 6).setValue(clientName);
-  transSheet.getRange(lastRow, 8).setValue(item);
-  transSheet.getRange(lastRow, 10).setValue('Client (عميل)');
-  transSheet.getRange(lastRow, 11).setValue(amount);
-  transSheet.getRange(lastRow, 12).setValue(currency);
-  transSheet.getRange(lastRow, 13).setValue(1);
-  transSheet.getRange(lastRow, 15).setValue('Accrual (استحقاق)');
-  transSheet.getRange(lastRow, 18).setValue(invoiceNo);
-  transSheet.getRange(lastRow, 19).setValue('Pending (معلق)');
-  transSheet.getRange(lastRow, 25).setValue('Yes (نعم)');
+  transSheet.getRange(lastRow, 4).setValue('Revenue Accrual (استحقاق إيراد)');
+  transSheet.getRange(lastRow, 5).setValue('Service Revenue (إيرادات خدمات)');
+  transSheet.getRange(lastRow, 6).setValue(clientCode);
+  transSheet.getRange(lastRow, 7).setValue(clientName);
+  transSheet.getRange(lastRow, 9).setValue(item);
+  transSheet.getRange(lastRow, 11).setValue('Client (عميل)');
+  transSheet.getRange(lastRow, 12).setValue(amount);
+  transSheet.getRange(lastRow, 13).setValue(currency);
+  transSheet.getRange(lastRow, 14).setValue(1);
+  transSheet.getRange(lastRow, 16).setValue('Accrual (استحقاق)');
+  transSheet.getRange(lastRow, 19).setValue(invoiceNo);
+  transSheet.getRange(lastRow, 20).setValue('Pending (معلق)');
+  transSheet.getRange(lastRow, 26).setValue('Yes (نعم)');
   
   applyPaymentMethodColor(transSheet, lastRow, 'Accrual (استحقاق)');
   

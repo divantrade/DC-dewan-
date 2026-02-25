@@ -835,13 +835,13 @@ function syncAllCashAndBankSheets() {
   // Find column indices
   const colIndex = {
     date: 1,           // B
-    movementType: 2,   // C
-    description: 7,    // H
-    partyName: 8,      // I
-    amount: 10,        // K
-    paymentMethod: 14, // O
-    cashBank: 15,      // P
-    reference: 16,     // Q
+    movementType: 3,   // D
+    description: 8,    // I
+    partyName: 9,      // J
+    amount: 11,        // L
+    paymentMethod: 15, // P
+    cashBank: 16,      // Q
+    reference: 17,     // R
     transNum: 0        // A
   };
   

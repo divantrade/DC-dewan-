@@ -135,8 +135,8 @@ function refreshDashboard() {
     
     for (let i = 1; i < transData.length; i++) {
       const date = transData[i][1]; // Date
-      const movementType = transData[i][2]; // Movement Type
-      const amount = parseFloat(transData[i][13]) || 0; // Amount TRY
+      const movementType = transData[i][3]; // Movement Type
+      const amount = parseFloat(transData[i][14]) || 0; // Amount TRY
       
       if (!date) continue;
       
@@ -216,9 +216,9 @@ function refreshDashboard() {
     let overdueAmount = 0;
     
     for (let i = 1; i < transData.length; i++) {
-      const status = transData[i][18];
-      const dueDate = transData[i][19];
-      const amount = parseFloat(transData[i][13]) || 0;
+      const status = transData[i][19];
+      const dueDate = transData[i][20];
+      const amount = parseFloat(transData[i][14]) || 0;
       
       if (status && status.includes('Pending') && dueDate) {
         const due = new Date(dueDate);
@@ -300,17 +300,17 @@ function generateClientStatement(clientCode, clientName) {
   const clientTrans = [];
 
   for (let i = 1; i < transData.length; i++) {
-    const code = transData[i][4]; // Client Code
-    const name = transData[i][5]; // Client Name
-    const showInStatement = transData[i][24]; // Column Y
+    const code = transData[i][5]; // Client Code
+    const name = transData[i][6]; // Client Name
+    const showInStatement = transData[i][25]; // Column Z
 
     if ((code === clientCode || name === clientName) &&
         (!showInStatement || showInStatement.includes('Yes'))) {
 
-      const movementType = transData[i][2] || '';
-      const amount = parseFloat(transData[i][10]) || 0;
-      const item = transData[i][6] || '';
-      const description = transData[i][7] || '';
+      const movementType = transData[i][3] || '';
+      const amount = parseFloat(transData[i][11]) || 0;
+      const item = transData[i][7] || '';
+      const description = transData[i][8] || '';
 
       // تحديد دائن/مدين بناءً على نوع الحركة
       let credit = 0; // له (دائن) - ما يستحق على العميل
@@ -722,12 +722,12 @@ function generateClientProfitability(clientCode, clientName) {
   let totalDirectExpenses = 0;
 
   for (let i = 1; i < transData.length; i++) {
-    const code = transData[i][4];
-    const name = transData[i][5];
-    const movementType = transData[i][2] || '';
-    const item = transData[i][6] || '';
-    const description = transData[i][7] || '';
-    const amount = parseFloat(transData[i][13]) || 0; // Amount TRY
+    const code = transData[i][5];
+    const name = transData[i][6];
+    const movementType = transData[i][3] || '';
+    const item = transData[i][7] || '';
+    const description = transData[i][8] || '';
+    const amount = parseFloat(transData[i][14]) || 0; // Amount TRY
     const date = transData[i][1];
 
     if (code === clientCode || name === clientName) {
@@ -979,12 +979,12 @@ function generateOverdueReport() {
   const overdueList = [];
   
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][18];
-    const dueDate = data[i][19];
-    const clientName = data[i][5];
-    const amount = data[i][10];
-    const currency = data[i][11];
-    const invoiceNo = data[i][17];
+    const status = data[i][19];
+    const dueDate = data[i][20];
+    const clientName = data[i][6];
+    const amount = data[i][11];
+    const currency = data[i][12];
+    const invoiceNo = data[i][18];
     
     if (status && status.includes('Pending') && dueDate) {
       const due = new Date(dueDate);

@@ -999,12 +999,12 @@ function checkOverduePayments() {
   const reminderDays = parseInt(getSettingValue('First Reminder (Days)')) || 30;
   
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][18]; // Status
-    const dueDate = data[i][19]; // Due Date
-    const amount = data[i][10]; // Amount
-    const clientName = data[i][5]; // Client Name
-    const invoiceNo = data[i][17]; // Invoice No
-    const currency = data[i][11]; // Currency
+    const status = data[i][19]; // Status (col T)
+    const dueDate = data[i][20]; // Due Date (col U)
+    const amount = data[i][11]; // Amount (col L)
+    const clientName = data[i][6]; // Client Name (col G)
+    const invoiceNo = data[i][18]; // Invoice No (col S)
+    const currency = data[i][12]; // Currency (col M)
     
     if (status && status.includes('Pending') && dueDate) {
       const due = new Date(dueDate);

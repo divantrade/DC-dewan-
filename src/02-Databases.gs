@@ -382,7 +382,129 @@ function createItemsDatabase(ss) {
   return sheet;
 }
 
-// ==================== 6. HELPER: ALTERNATING COLORS ====================
+// ==================== 6. ACTIVITIES SHEET ====================
+function createActivitiesSheet(ss) {
+  let sheet = ss.getSheetByName('Activities');
+  if (sheet) ss.deleteSheet(sheet);
+
+  sheet = ss.insertSheet('Activities');
+  sheet.setTabColor('#00695c');
+
+  const headers = [
+    'Activity Code',
+    'Activity Name (EN)',
+    'Activity Name (AR)',
+    'Activity Name (TR)',
+    'Company Name',
+    'Sector',
+    'Status',
+    'Notes',
+    'Created Date'
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  const widths = [110, 180, 150, 180, 200, 130, 80, 200, 100];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  const lastRow = 200;
+
+  // Sector validation
+  const sectorRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Logistics', 'Trading', 'Inspection', 'Tourism', 'Consulting', 'Other'], true)
+    .build();
+  sheet.getRange(2, 6, lastRow, 1).setDataValidation(sectorRule);
+
+  // Status validation
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .build();
+  sheet.getRange(2, 7, lastRow, 1).setDataValidation(statusRule);
+
+  // Date format
+  sheet.getRange(2, 9, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+
+  // Conditional formatting for Status
+  const statusRange = sheet.getRange(2, 7, lastRow, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Inactive').setBackground(COLORS.warning).setRanges([statusRange]).build()
+  ]);
+
+  sheet.setFrozenRows(1);
+
+  // Add note
+  sheet.getRange('A1').setNote('Activity Code: Auto-generated (ACT-001, ACT-002, ...)');
+
+  return sheet;
+}
+
+function addNewActivity() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Activities');
+
+  if (!sheet) {
+    ui.alert('⚠️ Activities sheet not found!\n\nRun "Setup System" first.');
+    return;
+  }
+
+  const lastRow = sheet.getLastRow() + 1;
+  const newCode = generateNextCode('ACT', sheet, 1);
+
+  // Set defaults
+  sheet.getRange(lastRow, 1).setValue(newCode);
+  sheet.getRange(lastRow, 7).setValue('Active');
+  sheet.getRange(lastRow, 9).setValue(new Date());
+
+  sheet.setActiveRange(sheet.getRange(lastRow, 2));
+  ss.setActiveSheet(sheet);
+
+  ui.alert(
+    '🏭 Add New Activity (إضافة نشاط جديد)\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'Activity Code: ' + newCode + '\n' +
+    'Row: ' + lastRow + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'Required fields (الحقول المطلوبة):\n' +
+    '• Activity Name (EN/AR/TR)\n' +
+    '• Company Name\n' +
+    '• Sector'
+  );
+}
+
+function getActivitiesList() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Activities');
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const activities = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][6] === 'Active' && data[i][1]) {
+      activities.push({
+        code: data[i][0],
+        nameEN: data[i][1],
+        nameAR: data[i][2],
+        nameTR: data[i][3],
+        companyName: data[i][4],
+        sector: data[i][5],
+        display: data[i][1] + ' (' + (data[i][2] || data[i][1]) + ')'
+      });
+    }
+  }
+  return activities;
+}
+
+// ==================== 7. HELPER: ALTERNATING COLORS ====================
 function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   for (let i = 0; i < numRows; i++) {
     const rowRange = sheet.getRange(startRow + i, 1, 1, numCols);
@@ -394,7 +516,7 @@ function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   }
 }
 
-// ==================== 7. GET FUNCTIONS ====================
+// ==================== 8. GET FUNCTIONS ====================
 function getCategoriesList() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Categories');

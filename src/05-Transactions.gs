@@ -69,33 +69,34 @@ function createTransactionsSheet(ss) {
   sheet = ss.insertSheet('Transactions');
   sheet.setTabColor('#3f51b5');
   
-  // 25 columns (A-Y)
+  // 26 columns (A-Z)
   const headers = [
     '#',                      // A (1)
     'Date (التاريخ)',         // B (2)
-    'Movement Type (نوع الحركة)', // C (3)
-    'Category (التصنيف)',     // D (4)
-    'Client Code (كود العميل)', // E (5)
-    'Client Name (اسم العميل)', // F (6)
-    'Item (البند)',           // G (7)
-    'Description (الوصف)',    // H (8)
-    'Party Name (اسم الطرف)', // I (9)
-    'Party Type (نوع الطرف)', // J (10)
-    'Amount (المبلغ)',        // K (11)
-    'Currency (العملة)',      // L (12)
-    'Exchange Rate (سعر الصرف)', // M (13)
-    'Amount TRY (بالليرة)',   // N (14)
-    'Payment Method (طريقة الدفع)', // O (15)
-    'Cash/Bank (الخزينة/البنك)', // P (16)
-    'Reference (المرجع)',     // Q (17)
-    'Invoice No (رقم الفاتورة)', // R (18)
-    'Status (الحالة)',        // S (19)
-    'Due Date (تاريخ الاستحقاق)', // T (20)
-    'Paid Amount (المدفوع)',  // U (21)
-    'Remaining (المتبقي)',    // V (22)
-    'Notes (ملاحظات)',        // W (23)
-    'Attachment (مرفق)',      // X (24)
-    'Show in Statement (إظهار في الكشف)' // Y (25)
+    'Activity (النشاط)',      // C (3)
+    'Movement Type (نوع الحركة)', // D (4)
+    'Category (التصنيف)',     // E (5)
+    'Client Code (كود العميل)', // F (6)
+    'Client Name (اسم العميل)', // G (7)
+    'Item (البند)',           // H (8)
+    'Description (الوصف)',    // I (9)
+    'Party Name (اسم الطرف)', // J (10)
+    'Party Type (نوع الطرف)', // K (11)
+    'Amount (المبلغ)',        // L (12)
+    'Currency (العملة)',      // M (13)
+    'Exchange Rate (سعر الصرف)', // N (14)
+    'Amount TRY (بالليرة)',   // O (15)
+    'Payment Method (طريقة الدفع)', // P (16)
+    'Cash/Bank (الخزينة/البنك)', // Q (17)
+    'Reference (المرجع)',     // R (18)
+    'Invoice No (رقم الفاتورة)', // S (19)
+    'Status (الحالة)',        // T (20)
+    'Due Date (تاريخ الاستحقاق)', // U (21)
+    'Paid Amount (المدفوع)',  // V (22)
+    'Remaining (المتبقي)',    // W (23)
+    'Notes (ملاحظات)',        // X (24)
+    'Attachment (مرفق)',      // Y (25)
+    'Show in Statement (إظهار في الكشف)' // Z (26)
   ];
   
   sheet.getRange(1, 1, 1, headers.length)
@@ -107,7 +108,7 @@ function createTransactionsSheet(ss) {
     .setWrap(true);
   
   // Column widths
-  const widths = [40, 90, 180, 170, 100, 180, 160, 200, 180, 130, 100, 70, 80, 100, 150, 160, 100, 100, 120, 100, 100, 100, 200, 150, 100];
+  const widths = [40, 90, 150, 180, 170, 100, 180, 160, 200, 180, 130, 100, 70, 80, 100, 150, 160, 100, 100, 120, 100, 100, 100, 200, 150, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   
   sheet.setRowHeight(1, 45);
@@ -115,84 +116,86 @@ function createTransactionsSheet(ss) {
   const lastRow = 1000;
   
   // ===== Static Data Validations =====
-  
-  // Movement Type (C)
+
+  // Activity (C) - Dynamic, set by refreshActivityDropdown()
+
+  // Movement Type (D)
   const movementRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.movementTypes, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 3, lastRow, 1).setDataValidation(movementRule);
-  
-  // Category (D)
+  sheet.getRange(2, 4, lastRow, 1).setDataValidation(movementRule);
+
+  // Category (E)
   const categoryRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.categories, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 4, lastRow, 1).setDataValidation(categoryRule);
-  
-  // Party Type (J)
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(categoryRule);
+
+  // Party Type (K)
   const partyTypeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.partyTypes, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 10, lastRow, 1).setDataValidation(partyTypeRule);
-  
-  // Currency (L)
+  sheet.getRange(2, 11, lastRow, 1).setDataValidation(partyTypeRule);
+
+  // Currency (M)
   const currencyRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(CURRENCIES, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 12, lastRow, 1).setDataValidation(currencyRule);
-  
-  // Payment Method (O)
+  sheet.getRange(2, 13, lastRow, 1).setDataValidation(currencyRule);
+
+  // Payment Method (P)
   const paymentMethodRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.paymentMethods, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 15, lastRow, 1).setDataValidation(paymentMethodRule);
-  
-  // Payment Status (S)
+  sheet.getRange(2, 16, lastRow, 1).setDataValidation(paymentMethodRule);
+
+  // Payment Status (T)
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.paymentStatus, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 19, lastRow, 1).setDataValidation(statusRule);
-  
-  // Show in Statement (Y)
+  sheet.getRange(2, 20, lastRow, 1).setDataValidation(statusRule);
+
+  // Show in Statement (Z)
   const showRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.showInStatement, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
-  
+  sheet.getRange(2, 26, lastRow, 1).setDataValidation(showRule);
+
   // ===== Number Formats =====
   sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('#,##0.0000');
-  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 20, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  sheet.getRange(2, 21, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('#,##0.0000');
+  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 21, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 22, lastRow, 1).setNumberFormat('#,##0.00');
-  
+  sheet.getRange(2, 23, lastRow, 1).setNumberFormat('#,##0.00');
+
   // ===== Conditional Formatting - تلوين الصف بالكامل حسب الحالة =====
-  // نطبق التنسيق على كل الأعمدة (A-Y = 25 عمود) بناءً على قيمة Status (العمود S)
-  const fullRowRange = sheet.getRange(2, 1, lastRow, 25);
+  // نطبق التنسيق على كل الأعمدة (A-Z = 26 عمود) بناءً على قيمة Status (العمود T)
+  const fullRowRange = sheet.getRange(2, 1, lastRow, 26);
 
   sheet.setConditionalFormatRules([
     // ✅ Paid (مدفوع) - أخضر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Paid")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Paid")')
       .setBackground('#c8e6c9')
       .setRanges([fullRowRange])
       .build(),
     // ⏳ Pending (معلق) - أصفر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Pending")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Pending")')
       .setBackground('#fff9c4')
       .setRanges([fullRowRange])
       .build(),
     // 🔶 Partial (جزئي) - برتقالي
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Partial")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Partial")')
       .setBackground('#ffe0b2')
       .setRanges([fullRowRange])
       .build(),
     // ❌ Cancelled (ملغي) - أحمر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Cancelled")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Cancelled")')
       .setBackground('#ffcdd2')
       .setRanges([fullRowRange])
       .build()
@@ -202,11 +205,12 @@ function createTransactionsSheet(ss) {
   sheet.setFrozenColumns(2);
   
   // Add notes
-  sheet.getRange('E1').setNote('Client Code: اختر الكود → الاسم يُملأ تلقائياً');
-  sheet.getRange('F1').setNote('Client Name: اختر الاسم → الكود يُملأ تلقائياً');
-  sheet.getRange('J1').setNote('Party Type: اختر النوع → يتغير dropdown في Party Name');
-  sheet.getRange('I1').setNote('Party Name: Dropdown ديناميكي حسب Party Type');
-  sheet.getRange('Y1').setNote('Show in Statement:\nYes = يظهر في كشف الحساب\nNo = مخفي (تكلفة داخلية)');
+  sheet.getRange('C1').setNote('Activity: اختر النشاط/خط الأعمال');
+  sheet.getRange('F1').setNote('Client Code: اختر الكود → الاسم يُملأ تلقائياً');
+  sheet.getRange('G1').setNote('Client Name: اختر الاسم → الكود يُملأ تلقائياً');
+  sheet.getRange('K1').setNote('Party Type: اختر النوع → يتغير dropdown في Party Name');
+  sheet.getRange('J1').setNote('Party Name: Dropdown ديناميكي حسب Party Type');
+  sheet.getRange('Z1').setNote('Show in Statement:\nYes = يظهر في كشف الحساب\nNo = مخفي (تكلفة داخلية)');
   
   return sheet;
 }
@@ -258,20 +262,20 @@ function refreshClientDropdowns() {
 
   if (clientCodes.length === 0) return;
 
-  // Client Code Dropdown (Column E)
+  // Client Code Dropdown (Column F)
   const codeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(clientCodes, true)
     .setAllowInvalid(true)
     .build();
-  transSheet.getRange(2, 5, lastRow, 1).setDataValidation(codeRule);
+  transSheet.getRange(2, 6, lastRow, 1).setDataValidation(codeRule);
 
-  // Client Name Dropdown (Column F) - يشمل كل الأسماء
+  // Client Name Dropdown (Column G) - يشمل كل الأسماء
   if (clientNames.length > 0) {
     const nameRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(clientNames, true)
       .setAllowInvalid(true)
       .build();
-    transSheet.getRange(2, 6, lastRow, 1).setDataValidation(nameRule);
+    transSheet.getRange(2, 7, lastRow, 1).setDataValidation(nameRule);
   }
 }
 
@@ -307,12 +311,12 @@ function refreshItemsDropdown() {
   
   if (items.length === 0) return;
   
-  // Item Dropdown (Column G)
+  // Item Dropdown (Column H)
   const itemRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(items, true)
     .setAllowInvalid(true)
     .build();
-  transSheet.getRange(2, 7, lastRow, 1).setDataValidation(itemRule);
+  transSheet.getRange(2, 8, lastRow, 1).setDataValidation(itemRule);
 }
 
 // ==================== 4. REFRESH CASH/BANK DROPDOWN ====================
@@ -361,7 +365,7 @@ function refreshCashBankDropdown() {
       .requireValueInList(cashBankList, true)
       .setAllowInvalid(true)
       .build();
-    transSheet.getRange(2, 16, 1000, 1).setDataValidation(rule);
+    transSheet.getRange(2, 17, 1000, 1).setDataValidation(rule);
   }
 }
 
@@ -491,11 +495,50 @@ function updatePartyNameDropdown(ss, sheet, row, partyType) {
       .requireValueInList(partyList, true)
       .setAllowInvalid(true)
       .build();
-    sheet.getRange(row, 9).setDataValidation(rule);
+    sheet.getRange(row, 10).setDataValidation(rule);
   } else {
     // إذا لم توجد بيانات، نمسح الـ validation ونضع رسالة
-    sheet.getRange(row, 9).clearDataValidations();
+    sheet.getRange(row, 10).clearDataValidations();
   }
+}
+
+// ==================== 5.5 REFRESH ACTIVITY DROPDOWN ====================
+/**
+ * تحديث dropdown الأنشطة من شيت Activities
+ */
+function refreshActivityDropdown() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const transSheet = ss.getSheetByName('Transactions');
+  const activitiesSheet = ss.getSheetByName('Activities');
+
+  if (!transSheet || !activitiesSheet) return;
+
+  const lastActivityRow = activitiesSheet.getLastRow();
+  if (lastActivityRow < 2) return;
+
+  const lastRow = 1000;
+
+  const activityData = activitiesSheet.getRange(2, 1, lastActivityRow - 1, 7).getValues();
+  const activities = [];
+
+  activityData.forEach(row => {
+    const nameEN = row[1]; // B = Name EN
+    const nameAR = row[2]; // C = Name AR
+    const status = row[6]; // G = Status
+
+    if (nameEN && status === 'Active') {
+      activities.push(nameEN + ' (' + (nameAR || nameEN) + ')');
+    }
+  });
+
+  if (activities.length === 0) return;
+
+  // Activity Dropdown (Column C)
+  const activityRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(activities, true)
+    .setAllowInvalid(true)
+    .build();
+  transSheet.getRange(2, 3, lastRow, 1).setDataValidation(activityRule);
 }
 
 // ==================== 6. SETUP ALL TRANSACTION DROPDOWNS ====================
@@ -505,26 +548,30 @@ function updatePartyNameDropdown(ss, sheet, row, partyType) {
 function setupTransactionDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  
+
   const transSheet = ss.getSheetByName('Transactions');
   if (!transSheet) {
     ui.alert('❌ Transactions sheet not found!');
     return;
   }
-  
-  // 1. Client Dropdowns (Code & Name)
+
+  // 1. Activity Dropdown
+  refreshActivityDropdown();
+
+  // 2. Client Dropdowns (Code & Name)
   refreshClientDropdowns();
-  
-  // 2. Items Dropdown
+
+  // 3. Items Dropdown
   refreshItemsDropdown();
-  
-  // 3. Cash/Bank Dropdown
+
+  // 4. Cash/Bank Dropdown
   refreshCashBankDropdown();
-  
-  // 4. الـ dropdowns الثابتة موجودة في createTransactionsSheet
-  
+
+  // 5. الـ dropdowns الثابتة موجودة في createTransactionsSheet
+
   ui.alert(
     '✅ Dropdowns Setup Complete!\n\n' +
+    '• Activity ✓ (ديناميكي)\n' +
     '• Client Code ✓ (ديناميكي)\n' +
     '• Client Name ✓ (ديناميكي)\n' +
     '• Items ✓ (ديناميكي)\n' +
@@ -539,6 +586,7 @@ function setupTransactionDropdowns() {
 }
 
 function refreshAllDropdowns() {
+  refreshActivityDropdown();
   refreshClientDropdowns();
   refreshItemsDropdown();
   refreshCashBankDropdown();
@@ -558,41 +606,41 @@ function refreshTransactionsValidation() {
 
   const lastRow = Math.max(sheet.getLastRow(), 1000);
 
-  // Movement Type (C - column 3)
+  // Movement Type (D - column 4)
   const movementRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.movementTypes, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 3, lastRow, 1).setDataValidation(movementRule);
+  sheet.getRange(2, 4, lastRow, 1).setDataValidation(movementRule);
 
-  // Category (D - column 4)
+  // Category (E - column 5)
   const categoryRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.categories, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 4, lastRow, 1).setDataValidation(categoryRule);
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(categoryRule);
 
-  // Party Type (J - column 10)
+  // Party Type (K - column 11)
   const partyTypeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.partyTypes, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 10, lastRow, 1).setDataValidation(partyTypeRule);
+  sheet.getRange(2, 11, lastRow, 1).setDataValidation(partyTypeRule);
 
-  // Payment Method (O - column 15)
+  // Payment Method (P - column 16)
   const paymentMethodRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.paymentMethods, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 15, lastRow, 1).setDataValidation(paymentMethodRule);
+  sheet.getRange(2, 16, lastRow, 1).setDataValidation(paymentMethodRule);
 
-  // Payment Status (S - column 19)
+  // Payment Status (T - column 20)
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.paymentStatus, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 19, lastRow, 1).setDataValidation(statusRule);
+  sheet.getRange(2, 20, lastRow, 1).setDataValidation(statusRule);
 
-  // Show in Statement (Y - column 25)
+  // Show in Statement (Z - column 26)
   const showRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(DROPDOWN_VALUES.showInStatement, true)
     .setAllowInvalid(false).build();
-  sheet.getRange(2, 25, lastRow, 1).setDataValidation(showRule);
+  sheet.getRange(2, 26, lastRow, 1).setDataValidation(showRule);
 }
 
 // ==================== 7. ONEDIT HANDLER ====================
@@ -615,8 +663,8 @@ function onEdit(e) {
   // ═══════════════════════════════════════════════════════════
   if (sheetName === 'Transactions' && row >= 2) {
     
-    // ───── Client Code (E, col 5) → Fill Client Name (F) ─────
-    if (col === 5 && value) {
+    // ───── Client Code (F, col 6) → Fill Client Name (G) ─────
+    if (col === 6 && value) {
       const clientsSheet = ss.getSheetByName('Clients');
       if (clientsSheet && clientsSheet.getLastRow() > 1) {
         const clientData = clientsSheet.getDataRange().getValues();
@@ -627,16 +675,16 @@ function onEdit(e) {
             const nameAR = clientData[i][2]; // Column C
 
             // Fill Client Name
-            sheet.getRange(row, 6).setValue(nameEN);
+            sheet.getRange(row, 7).setValue(nameEN);
 
             // Fill Party Type
-            sheet.getRange(row, 10).setValue('Client (عميل)');
+            sheet.getRange(row, 11).setValue('Client (عميل)');
 
             // Fill Party Name - ✅ محدّث: بدون تكرار الاسم
             const partyName = (nameAR && nameAR.trim() !== '' && nameAR.trim() !== nameEN.trim())
               ? nameEN + ' (' + nameAR + ')'
               : nameEN;
-            sheet.getRange(row, 9).setValue(partyName);
+            sheet.getRange(row, 10).setValue(partyName);
 
             // تحديث Show in Statement تلقائياً
             updateShowInStatement(sheet, row);
@@ -647,8 +695,8 @@ function onEdit(e) {
       }
     }
 
-    // ───── Client Name (F, col 6) → Fill Client Code (E) ─────
-    if (col === 6 && value) {
+    // ───── Client Name (G, col 7) → Fill Client Code (F) ─────
+    if (col === 7 && value) {
       const clientsSheet = ss.getSheetByName('Clients');
       if (clientsSheet && clientsSheet.getLastRow() > 1) {
         const clientData = clientsSheet.getDataRange().getValues();
@@ -662,16 +710,16 @@ function onEdit(e) {
           // Check if name matches EN, AR, or TR
           if (nameEN === value || nameAR === value || nameTR === value) {
             // Fill Client Code
-            sheet.getRange(row, 5).setValue(code);
+            sheet.getRange(row, 6).setValue(code);
 
             // Fill Party Type
-            sheet.getRange(row, 10).setValue('Client (عميل)');
+            sheet.getRange(row, 11).setValue('Client (عميل)');
 
             // Fill Party Name - ✅ محدّث: بدون تكرار الاسم
             const partyName = (nameAR && nameAR.trim() !== '' && nameAR.trim() !== nameEN.trim())
               ? nameEN + ' (' + nameAR + ')'
               : nameEN;
-            sheet.getRange(row, 9).setValue(partyName);
+            sheet.getRange(row, 10).setValue(partyName);
 
             // تحديث Show in Statement تلقائياً
             updateShowInStatement(sheet, row);
@@ -681,42 +729,42 @@ function onEdit(e) {
         }
       }
     }
-    
-    // ───── Party Type (J, col 10) → Update Party Name Dropdown (I) ─────
-    if (col === 10 && value) {
+
+    // ───── Party Type (K, col 11) → Update Party Name Dropdown (J) ─────
+    if (col === 11 && value) {
       updatePartyNameDropdown(ss, sheet, row, value);
 
       // مسح القيمة القديمة في Party Name
-      sheet.getRange(row, 9).setValue('');
+      sheet.getRange(row, 10).setValue('');
     }
 
-    // ───── Payment Method (O, col 15) ─────
+    // ───── Payment Method (P, col 16) ─────
     // ملاحظة: تم إزالة التلوين اليدوي لأنه يتعارض مع التنسيق الشرطي لـ Status
-    // التلوين الآن يعتمد فقط على Status (العمود S) عبر التنسيق الشرطي
+    // التلوين الآن يعتمد فقط على Status (العمود T) عبر التنسيق الشرطي
 
-    // ───── Amount (K) / Currency (L) / Rate (M) → Amount TRY (N) ─────
-    if (col === 11 || col === 12 || col === 13) {
-      const amount = sheet.getRange(row, 11).getValue() || 0;
-      const currency = sheet.getRange(row, 12).getValue() || 'TRY';
-      const rate = sheet.getRange(row, 13).getValue() || 1;
-      
+    // ───── Amount (L) / Currency (M) / Rate (N) → Amount TRY (O) ─────
+    if (col === 12 || col === 13 || col === 14) {
+      const amount = sheet.getRange(row, 12).getValue() || 0;
+      const currency = sheet.getRange(row, 13).getValue() || 'TRY';
+      const rate = sheet.getRange(row, 14).getValue() || 1;
+
       if (currency === 'TRY') {
-        sheet.getRange(row, 14).setValue(amount);
+        sheet.getRange(row, 15).setValue(amount);
       } else {
-        sheet.getRange(row, 14).setValue(amount * rate);
+        sheet.getRange(row, 15).setValue(amount * rate);
       }
     }
-    
-    // ───── Amount (K) / Paid (U) → Remaining (V) ─────
-    if (col === 11 || col === 21) {
-      const amount = sheet.getRange(row, 11).getValue() || 0;
-      const paid = sheet.getRange(row, 21).getValue() || 0;
-      sheet.getRange(row, 22).setValue(amount - paid);
+
+    // ───── Amount (L) / Paid (V) → Remaining (W) ─────
+    if (col === 12 || col === 22) {
+      const amount = sheet.getRange(row, 12).getValue() || 0;
+      const paid = sheet.getRange(row, 22).getValue() || 0;
+      sheet.getRange(row, 23).setValue(amount - paid);
     }
 
-    // ───── Client Name (F) / Party Name (I) → Show in Statement (Y) ─────
+    // ───── Client Name (G) / Party Name (J) → Show in Statement (Z) ─────
     // التحقق من توافق اسم العميل واسم الطرف
-    if (col === 6 || col === 9) {
+    if (col === 7 || col === 10) {
       updateShowInStatement(sheet, row);
     }
   }
@@ -750,6 +798,11 @@ function onEdit(e) {
     Utilities.sleep(300);
     refreshItemsDropdown();
   }
+
+  if (sheetName === 'Activities' && row >= 2) {
+    Utilities.sleep(300);
+    refreshActivityDropdown();
+  }
 }
 
 // ==================== 8. PAYMENT METHOD COLORS ====================
@@ -765,7 +818,7 @@ function applyPaymentMethodColor(sheet, row, paymentMethod) {
     return;
   }
   
-  const lastCol = 25;
+  const lastCol = 26;
   
   try {
     const rowRange = sheet.getRange(row, 1, 1, lastCol);
@@ -822,8 +875,8 @@ function applyAllPaymentColors() {
     return;
   }
   
-  // قراءة عمود Payment Method (العمود O = 15)
-  const paymentData = sheet.getRange(2, 15, lastRow - 1, 1).getValues();
+  // قراءة عمود Payment Method (العمود P = 16)
+  const paymentData = sheet.getRange(2, 16, lastRow - 1, 1).getValues();
   let colored = 0;
   
   for (let i = 0; i < paymentData.length; i++) {
@@ -857,8 +910,8 @@ function applyAllPaymentColors() {
  * إذا كان هناك اختلاف → No (لا)
  */
 function updateShowInStatement(sheet, row) {
-  const clientName = sheet.getRange(row, 6).getValue(); // Column F - Client Name
-  const partyName = sheet.getRange(row, 9).getValue();  // Column I - Party Name
+  const clientName = sheet.getRange(row, 7).getValue(); // Column G - Client Name
+  const partyName = sheet.getRange(row, 10).getValue();  // Column J - Party Name
 
   // إذا لم يكن هناك اسم عميل أو اسم طرف، لا تفعل شيء
   if (!clientName || !partyName) return;
@@ -875,11 +928,11 @@ function updateShowInStatement(sheet, row) {
                   partyNameStr.includes(clientNameStr) ||
                   clientNameStr.includes(partyNameStr);
 
-  // تعيين Show in Statement (Column Y = 25)
+  // تعيين Show in Statement (Column Z = 26)
   if (isMatch) {
-    sheet.getRange(row, 25).setValue('Yes (نعم)');
+    sheet.getRange(row, 26).setValue('Yes (نعم)');
   } else {
-    sheet.getRange(row, 25).setValue('No (لا)');
+    sheet.getRange(row, 26).setValue('No (لا)');
   }
 }
 
@@ -935,12 +988,12 @@ function addTransaction() {
   sheet.getRange(lastRow, 2).setValue(transactionDate).setNumberFormat('dd.mm.yyyy');
 
   // Set defaults
-  sheet.getRange(lastRow, 12).setValue('TRY');
-  sheet.getRange(lastRow, 13).setValue(1);
-  sheet.getRange(lastRow, 19).setValue('Pending (معلق)');
-  sheet.getRange(lastRow, 25).setValue('Yes (نعم)');
+  sheet.getRange(lastRow, 13).setValue('TRY');
+  sheet.getRange(lastRow, 14).setValue(1);
+  sheet.getRange(lastRow, 20).setValue('Pending (معلق)');
+  sheet.getRange(lastRow, 26).setValue('Yes (نعم)');
 
-  // Select first input cell
+  // Select first input cell (Activity column)
   sheet.setActiveRange(sheet.getRange(lastRow, 3));
 
   const displayDate = Utilities.formatDate(transactionDate, Session.getScriptTimeZone(), 'dd.MM.yyyy');
@@ -1037,37 +1090,37 @@ function updateStatusConditionalFormatting() {
   const lastRow = Math.max(sheet.getLastRow(), 100);
 
   // 1. مسح كل الألوان اليدوية من الصفوف (ما عدا الهيدر)
-  const dataRange = sheet.getRange(2, 1, lastRow - 1, 25);
+  const dataRange = sheet.getRange(2, 1, lastRow - 1, 26);
   dataRange.setBackground(null);
 
   // 2. مسح قواعد التنسيق الشرطي القديمة
   sheet.clearConditionalFormatRules();
 
   // 3. تطبيق قواعد التنسيق الشرطي الجديدة
-  const fullRowRange = sheet.getRange(2, 1, lastRow, 25);
+  const fullRowRange = sheet.getRange(2, 1, lastRow, 26);
 
   sheet.setConditionalFormatRules([
     // ✅ Paid (مدفوع) - أخضر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Paid")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Paid")')
       .setBackground('#c8e6c9')
       .setRanges([fullRowRange])
       .build(),
     // ⏳ Pending (معلق) - أصفر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Pending")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Pending")')
       .setBackground('#fff9c4')
       .setRanges([fullRowRange])
       .build(),
     // 🔶 Partial (جزئي) - برتقالي
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Partial")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Partial")')
       .setBackground('#ffe0b2')
       .setRanges([fullRowRange])
       .build(),
     // ❌ Cancelled (ملغي) - أحمر
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($S2,"Cancelled")')
+      .whenFormulaSatisfied('=REGEXMATCH($T2,"Cancelled")')
       .setBackground('#ffcdd2')
       .setRanges([fullRowRange])
       .build()
