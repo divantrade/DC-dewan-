@@ -22,6 +22,7 @@ function setupSystemSecure() {
     '• Settings & Holidays\n' +
     '• Categories & Movement Types\n' +
     '• Items Database & Activities\n' +
+    '• Activity Profiles (per-activity branding)\n' +
     '• Clients, Client Activities, Vendors, Employees\n' +
     '• Cash Boxes & Bank Accounts\n' +
     '• Transactions\n' +
@@ -47,6 +48,7 @@ function setupSystemSecure() {
     createMovementTypesSheet(ss);
     createItemsDatabase(ss);
     createActivitiesSheet(ss);
+    createActivityProfilesSheet(ss);
 
     // Part 3: Party sheets
     createClientsSheet(ss);

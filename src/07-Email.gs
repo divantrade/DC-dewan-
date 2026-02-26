@@ -357,11 +357,12 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
         invoiceDate: logData[i][1],
         clientCode: logData[i][2],
         clientName: logData[i][3],
-        service: logData[i][4],
-        period: logData[i][5],
-        amount: logData[i][6],
-        currency: logData[i][7],
-        pdfLink: logData[i][9]
+        activity: logData[i][4],     // Activity column
+        service: logData[i][5],
+        period: logData[i][6],
+        amount: logData[i][7],
+        currency: logData[i][8],
+        pdfLink: logData[i][10]
       };
       break;
     }
@@ -412,18 +413,19 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
       }
     }
     
-    // Send email
+    // Send email with activity-specific sender name
+    const actProfile = getActivityProfile(invoiceData.activity || '');
     GmailApp.sendEmail(clientEmail, template.subject, '', {
       htmlBody: template.body,
-      name: getSettingValue('Company Name (EN)') || 'Dewan Consulting',
-      replyTo: 'sales@aldewan.net',
+      name: actProfile.companyNameEN,
+      replyTo: actProfile.email || 'sales@aldewan.net',
       attachments: attachments
     });
     
-    // Update Invoice Log
-    logSheet.getRange(invoiceRow, 9).setValue('Sent');
-    logSheet.getRange(invoiceRow, 12).setValue('Sent');
-    logSheet.getRange(invoiceRow, 13).setValue(new Date());
+    // Update Invoice Log (Status=J/10, Email Status=M/13, Email Sent Date=N/14)
+    logSheet.getRange(invoiceRow, 10).setValue('Sent');
+    logSheet.getRange(invoiceRow, 13).setValue('Sent');
+    logSheet.getRange(invoiceRow, 14).setValue(new Date());
     
     // Log to Email Log
     logEmail(invoiceData.invoiceNo, invoiceData.clientCode, invoiceData.clientName, 
@@ -436,8 +438,8 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
     logEmail(invoiceData.invoiceNo, invoiceData.clientCode, invoiceData.clientName,
              clientEmail, clientLanguage, 'Failed', e.message, sentBy, invoiceData.pdfLink);
     
-    // Update Invoice Log
-    logSheet.getRange(invoiceRow, 12).setValue('Failed');
+    // Update Invoice Log (Email Status=M/13)
+    logSheet.getRange(invoiceRow, 13).setValue('Failed');
     
     return { success: false, error: e.message };
   }
@@ -477,15 +479,15 @@ function sendPendingInvoices() {
   for (let i = 1; i < data.length; i++) {
     const invoiceNo = data[i][0];
     const invoiceDate = new Date(data[i][1]);
-    const sendEmail = data[i][10];
-    const emailStatus = data[i][11];
-    
+    const sendEmail = data[i][11];     // Send Email (column L)
+    const emailStatus = data[i][12];   // Email Status (column M)
+
     if (sendEmail !== 'Yes' || emailStatus === 'Sent') continue;
-    
+
     // Calculate send date (3 working days after invoice date)
     const sendDate = calculateSendDate(invoiceDate);
     sendDate.setHours(0, 0, 0, 0);
-    
+
     if (today >= sendDate) {
       readyToSend.push({
         row: i + 1,
@@ -895,9 +897,9 @@ function autoSendPendingInvoices() {
     for (let i = 1; i < data.length; i++) {
       const invoiceNo = data[i][0];
       const invoiceDate = new Date(data[i][1]);
-      const sendEmail = data[i][10];
-      const emailStatus = data[i][11];
-      
+      const sendEmail = data[i][11];     // Send Email (column L)
+      const emailStatus = data[i][12];   // Email Status (column M)
+
       if (sendEmail !== 'Yes' || emailStatus === 'Sent') continue;
       
       // Check if 3 working days have passed

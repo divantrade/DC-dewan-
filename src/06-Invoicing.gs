@@ -1,7 +1,7 @@
 // ╔════════════════════════════════════════════════════════════════════════════╗
-// ║                    DC CONSULTING ACCOUNTING SYSTEM v3.0                     ║
+// ║                    DC CONSULTING ACCOUNTING SYSTEM v3.1                     ║
 // ║                              Part 6 of 9                                    ║
-// ║                           Invoice System                                    ║
+// ║              Invoice System (with Activity Profiles support)                ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 // ==================== 1. CREATE INVOICE LOG SHEET ====================
@@ -17,55 +17,61 @@ function createInvoiceLogSheet(ss) {
     'Invoice Date',      // B
     'Client Code',       // C
     'Client Name',       // D
-    'Service',           // E
-    'Period',            // F
-    'Amount',            // G
-    'Currency',          // H
-    'Status',            // I
-    'PDF Link',          // J
-    'Send Email',        // K - Yes/No
-    'Email Status',      // L - Pending/Sent/Failed
-    'Email Sent Date',   // M
-    'Trans. Code',       // N
-    'Notes',             // O
-    'Created Date'       // P
+    'Activity',          // E - Accounting/Consulting/etc.
+    'Service',           // F
+    'Period',            // G
+    'Amount',            // H
+    'Currency',          // I
+    'Status',            // J
+    'PDF Link',          // K
+    'Send Email',        // L - Yes/No
+    'Email Status',      // M - Pending/Sent/Failed
+    'Email Sent Date',   // N
+    'Trans. Code',       // O
+    'Notes',             // P
+    'Created Date'       // Q
   ];
-  
+
   sheet.getRange(1, 1, 1, headers.length)
     .setValues([headers])
     .setBackground('#6a1b9a')
     .setFontColor('#ffffff')
     .setFontWeight('bold');
-  
-  const widths = [100, 100, 90, 180, 150, 100, 100, 70, 90, 250, 80, 100, 100, 120, 200, 100];
+
+  const widths = [100, 100, 90, 180, 120, 150, 100, 100, 70, 90, 250, 80, 100, 100, 120, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   
   const lastRow = 500;
   
-  // Status validation
+  // Activity validation (column E)
+  const activityRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true).build();
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(activityRule);
+
+  // Status validation (column J)
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Draft', 'Issued', 'Sent', 'Paid', 'Cancelled'], true).build();
-  sheet.getRange(2, 9, lastRow, 1).setDataValidation(statusRule);
-  
-  // Send Email validation
+  sheet.getRange(2, 10, lastRow, 1).setDataValidation(statusRule);
+
+  // Send Email validation (column L)
   const sendRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Yes', 'No'], true).build();
-  sheet.getRange(2, 11, lastRow, 1).setDataValidation(sendRule);
-  
-  // Email Status validation
+  sheet.getRange(2, 12, lastRow, 1).setDataValidation(sendRule);
+
+  // Email Status validation (column M)
   const emailStatusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Pending', 'Sent', 'Failed'], true).build();
-  sheet.getRange(2, 12, lastRow, 1).setDataValidation(emailStatusRule);
-  
+  sheet.getRange(2, 13, lastRow, 1).setDataValidation(emailStatusRule);
+
   // Number formats
   sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  sheet.getRange(2, 7, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
-  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
-  
+  sheet.getRange(2, 8, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
+  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
+
   // Conditional formatting
-  const statusRange = sheet.getRange(2, 9, lastRow, 1);
-  const emailRange = sheet.getRange(2, 12, lastRow, 1);
+  const statusRange = sheet.getRange(2, 10, lastRow, 1);
+  const emailRange = sheet.getRange(2, 13, lastRow, 1);
   
   sheet.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule()
@@ -103,24 +109,8 @@ function createInvoiceTemplateSheet(ss) {
   sheet.setColumnWidth(5, 90);   // Unit Price
   sheet.setColumnWidth(6, 90);   // Total
 
-  // Get logo URL from settings
-  const companyLogo = getSettingValue('Company Logo URL') || '';
-  let logoUrl = '';
-  if (companyLogo && companyLogo.trim() !== '') {
-    logoUrl = companyLogo.trim();
-    // Handle Google Drive sharing links
-    if (logoUrl.includes('drive.google.com/file/d/')) {
-      const fileId = logoUrl.match(/\/d\/([^\/]+)/);
-      if (fileId && fileId[1]) {
-        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-      }
-    } else if (logoUrl.includes('drive.google.com/open?id=')) {
-      const fileId = logoUrl.match(/id=([^&]+)/);
-      if (fileId && fileId[1]) {
-        logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-      }
-    }
-  }
+  // Get logo URL from settings (default profile)
+  const logoUrl = resolveLogoUrl(getSettingValue('Company Logo URL') || '');
 
   let currentRow = 1;
 
@@ -264,20 +254,7 @@ function updateInvoiceLogo() {
     return;
   }
 
-  let logoUrl = companyLogo.trim();
-
-  // Handle Google Drive sharing links
-  if (logoUrl.includes('drive.google.com/file/d/')) {
-    const fileId = logoUrl.match(/\/d\/([^\/]+)/);
-    if (fileId && fileId[1]) {
-      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-    }
-  } else if (logoUrl.includes('drive.google.com/open?id=')) {
-    const fileId = logoUrl.match(/id=([^&]+)/);
-    if (fileId && fileId[1]) {
-      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
-    }
-  }
+  const logoUrl = resolveLogoUrl(companyLogo);
 
   // Insert row at top for logo
   sheet.insertRowBefore(1);
@@ -377,8 +354,9 @@ function generateInvoiceFromTransaction() {
   }
   
   const clientData = firstClientCode ? getClientData(firstClientCode) : null;
-  
-  const itemsList = selectedData.map((d, i) => 
+  const clientActivity = firstClientCode ? getClientPrimaryActivity(firstClientCode) : '';
+
+  const itemsList = selectedData.map((d, i) =>
     (i + 1) + '. ' + (d.item || d.description || 'Item') + ': ' + formatCurrency(d.amount, currency)
   ).join('\n');
   
@@ -410,6 +388,7 @@ function generateInvoiceFromTransaction() {
   fillInvoiceTemplate(ss, {
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
+    activity: clientActivity,  // Activity profile for branding
     clientName: firstClientName || (clientData ? clientData.nameEN : ''),
     clientNameAR: clientData ? clientData.nameAR : '',
     companyType: clientData ? clientData.companyType : '',
@@ -423,12 +402,13 @@ function generateInvoiceFromTransaction() {
     vatRate: 0,
     total: totalAmount
   });
-  
+
   logInvoice({
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
     clientCode: firstClientCode,
     clientName: firstClientName,
+    activity: clientActivity,  // Track activity in log
     service: selectedData.length > 1 ? 'Multiple Items (' + selectedData.length + ')' : (selectedData[0].item || ''),
     period: period,
     amount: totalAmount,
@@ -494,17 +474,38 @@ function generateCustomInvoice() {
     return;
   }
   
+  // Get client activities for auto-detection
+  const clientActivities = getClientActivitiesList(clientCode);
+  let selectedActivity = '';
+
+  if (clientActivities.length === 1) {
+    selectedActivity = clientActivities[0].activity;
+  } else if (clientActivities.length > 1) {
+    const actList = clientActivities.map(a => a.activity).join(', ');
+    const actResponse = ui.prompt(
+      '📄 Custom Invoice - Select Activity\n\n' +
+      'Client has multiple activities: ' + actList,
+      'Enter activity name (اختر النشاط):\n\n' + actList,
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (actResponse.getSelectedButton() !== ui.Button.OK) return;
+    selectedActivity = actResponse.getResponseText().trim();
+  }
+
+  const activityProfile = getActivityProfile(selectedActivity);
+
   const clientConfirm = ui.alert(
     '✅ Client Found (تم العثور على العميل)\n\n' +
     'Code: ' + clientCode + '\n' +
     'Name (EN): ' + clientData.nameEN + '\n' +
     'Name (AR): ' + (clientData.nameAR || '-') + '\n' +
-    'Tax Number: ' + (clientData.taxNumber || '-') + '\n\n' +
+    'Tax Number: ' + (clientData.taxNumber || '-') + '\n' +
+    (selectedActivity ? 'Activity: ' + selectedActivity + ' (' + activityProfile.companyNameEN + ')' : '') + '\n\n' +
     'Continue with this client?',
     ui.ButtonSet.YES_NO
   );
   if (clientConfirm !== ui.Button.YES) return;
-  
+
   // ===== Step 2: Enter Service Description =====
   const descResponse = ui.prompt(
     '📄 Custom Invoice (2/5) - Service\n\nClient: ' + clientData.nameEN,
@@ -591,6 +592,7 @@ function generateCustomInvoice() {
   fillInvoiceTemplate(ss, {
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
+    activity: selectedActivity,  // Activity profile for branding
     clientName: clientData.nameEN,
     clientNameAR: clientData.nameAR || '',
     companyType: clientData.companyType || '',
@@ -610,12 +612,13 @@ function generateCustomInvoice() {
     vatRate: vatRate * 100,
     total: totalAmount
   });
-  
+
   logInvoice({
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
     clientCode: clientCode,
     clientName: clientData.nameEN,
+    activity: selectedActivity,  // Track activity in log
     service: description,
     period: period,
     amount: totalAmount,
@@ -735,10 +738,11 @@ function generateAllMonthlyInvoices() {
         ? 'Monthly Consulting (استشارات شهرية)'
         : 'Monthly ' + act.activity;
 
-    // Fill template for each (to create PDF)
+    // Fill template with activity-specific branding
     fillInvoiceTemplate(ss, {
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
+      activity: act.activity,  // Activity profile for branding
       clientName: act.clientName,
       clientNameAR: clientData ? clientData.nameAR : '',
       companyType: clientData ? clientData.companyType : '',
@@ -771,12 +775,13 @@ function generateAllMonthlyInvoices() {
       }
     }
 
-    // Log invoice
+    // Log invoice with activity
     logInvoice({
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
       clientCode: act.clientCode,
       clientName: act.clientName,
+      activity: act.activity,  // Track activity in log
       service: serviceLabel,
       period: period,
       amount: act.monthlyFee,
@@ -808,36 +813,66 @@ function generateAllMonthlyInvoices() {
 }
 
 // ==================== 7. FILL INVOICE TEMPLATE ====================
+/**
+ * Fill invoice template with data and activity-specific branding
+ * @param {Spreadsheet} ss
+ * @param {object} data - Invoice data including items, amounts, client info
+ * data.activity - Activity name (e.g. 'Accounting') for per-activity branding
+ */
 function fillInvoiceTemplate(ss, data) {
   let sheet = ss.getSheetByName('Invoice Template');
   if (!sheet) {
     sheet = createInvoiceTemplateSheet(ss);
   }
 
-  // Check if logo exists to determine row offset
-  const companyLogo = getSettingValue('Company Logo URL') || '';
-  const hasLogo = companyLogo && companyLogo.trim() !== '';
+  // Get activity profile for branding (falls back to Settings if no activity)
+  const profile = getActivityProfile(data.activity || '');
+
+  // === Update branding: Logo, Company Name, Bank Details ===
+  let logoUrl = resolveLogoUrl(profile.logoUrl);
+  const hasLogo = logoUrl !== '';
+
+  // Row 1: Logo
+  if (hasLogo) {
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+    sheet.setRowHeight(1, 60);
+  } else {
+    sheet.getRange('A1').clearContent();
+    sheet.setRowHeight(1, 20);
+  }
+
   const rowOffset = hasLogo ? 1 : 0;
+
+  // Row 2 (or 1): Company Name EN
+  sheet.getRange('A' + (1 + rowOffset) + ':F' + (1 + rowOffset)).getMergedRanges().length ||
+    sheet.getRange('A' + (1 + rowOffset) + ':F' + (1 + rowOffset));
+  sheet.getRange('A' + (1 + rowOffset)).setValue(profile.companyNameEN);
+
+  // Row 3 (or 2): Company Name AR
+  sheet.getRange('A' + (2 + rowOffset)).setValue(profile.companyNameAR);
+
+  // Row 4 (or 3): Address
+  sheet.getRange('A' + (3 + rowOffset)).setValue(profile.address);
 
   // Details start row (7 without logo, 8 with logo)
   const detailsStartRow = 7 + rowOffset;
-  // Items start row (14 without logo, 15 with logo) - 5 detail rows now (no Period)
+  // Items start row (14 without logo, 15 with logo)
   const itemsStartRow = 14 + rowOffset;
   // Totals row (26 without logo, 27 with logo)
   const totalsStartRow = 26 + rowOffset;
 
-  // Clear previous data (5 detail rows now - no Period)
+  // Clear previous data
   sheet.getRange('C' + detailsStartRow + ':F' + (detailsStartRow + 4)).clearContent();
   sheet.getRange('A' + itemsStartRow + ':F' + (itemsStartRow + 9)).clearContent();
   sheet.getRange('F' + totalsStartRow + ':F' + (totalsStartRow + 2)).clearContent();
 
-  // Invoice details (values in column C for merged cells, F for date)
-  sheet.getRange('C' + detailsStartRow).setValue(data.invoiceNo);  // Invoice No value in C-D merged
-  sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));  // Date value
-  sheet.getRange('C' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));  // Client in C-F merged
-  sheet.getRange('C' + (detailsStartRow + 2)).setValue(data.companyType || '');  // Company Type in C-F merged
-  sheet.getRange('C' + (detailsStartRow + 3)).setValue(data.taxNumber || '');  // Tax Number in C-F merged
-  sheet.getRange('C' + (detailsStartRow + 4)).setValue(data.address || '');  // Address in C-F merged
+  // Invoice details
+  sheet.getRange('C' + detailsStartRow).setValue(data.invoiceNo);
+  sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
+  sheet.getRange('C' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
+  sheet.getRange('C' + (detailsStartRow + 2)).setValue(data.companyType || '');
+  sheet.getRange('C' + (detailsStartRow + 3)).setValue(data.taxNumber || '');
+  sheet.getRange('C' + (detailsStartRow + 4)).setValue(data.address || '');
 
   // Items - 6 columns: #, Item, Description, Qty, Unit Price, Total
   if (data.items && data.items.length > 0) {
@@ -845,8 +880,8 @@ function fillInvoiceTemplate(ss, data) {
       const row = itemsStartRow + i;
       if (row < itemsStartRow + 10) {
         sheet.getRange(row, 1).setValue(i + 1).setHorizontalAlignment('center');
-        sheet.getRange(row, 2).setValue(item.item || '');  // Item column
-        sheet.getRange(row, 3).setValue(item.description || '');  // Description column
+        sheet.getRange(row, 2).setValue(item.item || '');
+        sheet.getRange(row, 3).setValue(item.description || '');
         sheet.getRange(row, 4).setValue(item.qty || 1).setHorizontalAlignment('center');
         sheet.getRange(row, 5).setValue(item.unitPrice).setNumberFormat('#,##0.00');
         sheet.getRange(row, 6).setValue(item.total).setNumberFormat('#,##0.00');
@@ -854,14 +889,52 @@ function fillInvoiceTemplate(ss, data) {
     });
   }
 
-  // Totals (column F now)
+  // Totals
   const currencySymbol = data.currency === 'TRY' ? '₺' : (data.currency === 'USD' ? '$' : (data.currency === 'EUR' ? '€' : data.currency));
   sheet.getRange('F' + totalsStartRow).setValue(data.subtotal).setNumberFormat('#,##0.00');
   sheet.getRange('E' + (totalsStartRow + 1)).setValue('VAT (' + (data.vatRate || 0) + '%):').setFontWeight('bold').setHorizontalAlignment('right');
   sheet.getRange('F' + (totalsStartRow + 1)).setValue(data.vat || 0).setNumberFormat('#,##0.00');
   sheet.getRange('F' + (totalsStartRow + 2)).setValue(data.total).setNumberFormat('#,##0.00 "' + currencySymbol + '"');
 
+  // === Update Bank Details with activity profile ===
+  const bankRow = totalsStartRow + 4;
+  sheet.getRange('C' + (bankRow + 1)).setValue(profile.bankName);
+  sheet.getRange('C' + (bankRow + 2)).setValue(profile.ibanTRY);
+  sheet.getRange('C' + (bankRow + 3)).setValue(profile.ibanUSD);
+  sheet.getRange('C' + (bankRow + 4)).setValue(profile.swiftCode);
+
+  // === Add website to footer if available ===
+  const footerRow = bankRow + 6;
+  let footerText = 'Thank you for your business! / شكراً لتعاملكم معنا';
+  if (profile.website) {
+    footerText += '\n' + profile.website;
+  }
+  sheet.getRange('A' + footerRow).setValue(footerText);
+
   return sheet;
+}
+
+/**
+ * Resolve logo URL - convert Google Drive sharing links to direct image URLs
+ */
+function resolveLogoUrl(rawUrl) {
+  if (!rawUrl || rawUrl.trim() === '') return '';
+
+  let logoUrl = rawUrl.trim();
+
+  if (logoUrl.includes('drive.google.com/file/d/')) {
+    const fileId = logoUrl.match(/\/d\/([^\/]+)/);
+    if (fileId && fileId[1]) {
+      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+    }
+  } else if (logoUrl.includes('drive.google.com/open?id=')) {
+    const fileId = logoUrl.match(/id=([^&]+)/);
+    if (fileId && fileId[1]) {
+      logoUrl = 'https://drive.google.com/uc?export=view&id=' + fileId[1];
+    }
+  }
+
+  return logoUrl;
 }
 
 // ==================== 8. LOG INVOICE ====================
@@ -878,17 +951,18 @@ function logInvoice(data) {
   sheet.getRange(lastRow, 2).setValue(data.invoiceDate);
   sheet.getRange(lastRow, 3).setValue(data.clientCode);
   sheet.getRange(lastRow, 4).setValue(data.clientName);
-  sheet.getRange(lastRow, 5).setValue(data.service);
-  sheet.getRange(lastRow, 6).setValue(data.period);
-  sheet.getRange(lastRow, 7).setValue(data.amount);
-  sheet.getRange(lastRow, 8).setValue(data.currency);
-  sheet.getRange(lastRow, 9).setValue(data.status || 'Issued');
-  sheet.getRange(lastRow, 10).setValue(data.pdfLink || '');
-  sheet.getRange(lastRow, 11).setValue(data.sendEmail || 'Yes');
-  sheet.getRange(lastRow, 12).setValue(data.emailStatus || 'Pending');
-  sheet.getRange(lastRow, 14).setValue(data.transCode || '');
-  sheet.getRange(lastRow, 15).setValue(data.notes || '');
-  sheet.getRange(lastRow, 16).setValue(new Date());
+  sheet.getRange(lastRow, 5).setValue(data.activity || '');       // Activity
+  sheet.getRange(lastRow, 6).setValue(data.service);
+  sheet.getRange(lastRow, 7).setValue(data.period);
+  sheet.getRange(lastRow, 8).setValue(data.amount);
+  sheet.getRange(lastRow, 9).setValue(data.currency);
+  sheet.getRange(lastRow, 10).setValue(data.status || 'Issued');
+  sheet.getRange(lastRow, 11).setValue(data.pdfLink || '');
+  sheet.getRange(lastRow, 12).setValue(data.sendEmail || 'Yes');
+  sheet.getRange(lastRow, 13).setValue(data.emailStatus || 'Pending');
+  sheet.getRange(lastRow, 15).setValue(data.transCode || '');
+  sheet.getRange(lastRow, 16).setValue(data.notes || '');
+  sheet.getRange(lastRow, 17).setValue(new Date());
   
   return lastRow;
 }
@@ -902,8 +976,8 @@ function updateInvoicePDFLink(invoiceNo, pdfUrl) {
   const data = logSheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === invoiceNo) {
-      logSheet.getRange(i + 1, 10).setValue(pdfUrl);
-      logSheet.getRange(i + 1, 15).setValue('PDF saved to client folder');
+      logSheet.getRange(i + 1, 11).setValue(pdfUrl);   // PDF Link (column K)
+      logSheet.getRange(i + 1, 16).setValue('PDF saved to client folder');  // Notes (column P)
       break;
     }
   }

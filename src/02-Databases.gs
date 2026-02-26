@@ -667,7 +667,178 @@ function getClientsWithMonthlyFees() {
   return getClientActivitiesList(null, 'Monthly').filter(a => a.monthlyFee > 0);
 }
 
-// ==================== 7. HELPER: ALTERNATING COLORS ====================
+// ==================== 7. ACTIVITY PROFILES SHEET ====================
+/**
+ * Activity Profiles - stores per-activity branding for invoices
+ * Each activity (Accounting, Consulting, etc.) has its own:
+ * Logo, Company Name, Website, Bank Details
+ * Shared fields (Address, Phone, Email) come from Settings
+ */
+function createActivityProfilesSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Activity Profiles');
+  if (sheet) ss.deleteSheet(sheet);
+
+  sheet = ss.insertSheet('Activity Profiles');
+  sheet.setTabColor('#1565c0');
+
+  const headers = [
+    'Activity',           // A - Accounting, Consulting, etc.
+    'Company Name (EN)',  // B
+    'Company Name (AR)',  // C
+    'Company Name (TR)',  // D
+    'Logo URL',           // E - Google Drive link
+    'Website',            // F
+    'Bank Name',          // G
+    'IBAN TRY',           // H
+    'IBAN USD',           // I
+    'SWIFT Code',         // J
+    'Status'              // K
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  const widths = [120, 200, 180, 200, 300, 200, 150, 260, 260, 120, 80];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  // Default data - user fills in actual values
+  const data = [
+    ['Accounting',  'Dewan Accounting',  'ديوان للمحاسبة',    'DİVAN MUHASEBECİLİK', '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active'],
+    ['Consulting',  'Dewan Consulting',  'ديوان للاستشارات',   'DİVAN DANIŞMANLIK',   '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active'],
+    ['Logistics',   'Dewan Logistics',   'ديوان للوجستيات',    'DİVAN LOJİSTİK',      '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active'],
+    ['Trading',     'Dewan Trading',     'ديوان للتجارة',      'DİVAN TİCARET',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active'],
+    ['Inspection',  'Dewan Inspection',  'ديوان للتفتيش',      'DİVAN DENETİM',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active'],
+    ['Tourism',     'Dewan Tourism',     'ديوان للسياحة',      'DİVAN TURİZM',         '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active']
+  ];
+
+  sheet.getRange(2, 1, data.length, headers.length).setValues(data);
+
+  const lastRow = 20;
+
+  // Activity validation (column A)
+  const activityRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true)
+    .build();
+  sheet.getRange(2, 1, lastRow, 1).setDataValidation(activityRule);
+
+  // Status validation (column K)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .build();
+  sheet.getRange(2, 11, lastRow, 1).setDataValidation(statusRule);
+
+  // Conditional formatting
+  const statusRange = sheet.getRange(2, 11, lastRow, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Inactive').setBackground(COLORS.warning).setRanges([statusRange]).build()
+  ]);
+
+  sheet.setFrozenRows(1);
+
+  // Notes
+  sheet.getRange('A1').setNote('Activity type - must match Client Activities dropdown');
+  sheet.getRange('E1').setNote('Google Drive sharing link for the logo image');
+  sheet.getRange('F1').setNote('Website URL for this activity');
+  sheet.getRange('H1').setNote('IBAN for TRY transactions');
+  sheet.getRange('I1').setNote('IBAN for USD transactions');
+
+  applyAlternatingColors(sheet, 2, data.length, headers.length);
+
+  return sheet;
+}
+
+/**
+ * Get activity profile (branding) for a specific activity
+ * Falls back to Settings for shared fields (address, phone, email)
+ * @param {string} activityName - e.g. 'Accounting', 'Consulting'
+ * @returns {object|null} - Activity profile with branding info
+ */
+function getActivityProfile(activityName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Activity Profiles');
+
+  // Default: use Settings if no Activity Profiles sheet
+  if (!sheet || !activityName) {
+    return getDefaultProfile();
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === activityName && data[i][10] === 'Active') {
+      return {
+        activity: data[i][0],
+        companyNameEN: data[i][1] || getSettingValue('Company Name (EN)') || '',
+        companyNameAR: data[i][2] || getSettingValue('Company Name (AR)') || '',
+        companyNameTR: data[i][3] || getSettingValue('Company Name (TR)') || '',
+        logoUrl: data[i][4] || getSettingValue('Company Logo URL') || '',
+        website: data[i][5] || '',
+        bankName: data[i][6] || getSettingValue('Bank Name') || '',
+        ibanTRY: data[i][7] || getSettingValue('IBAN TRY') || '',
+        ibanUSD: data[i][8] || getSettingValue('IBAN USD') || '',
+        swiftCode: data[i][9] || getSettingValue('SWIFT Code') || '',
+        // Shared fields from Settings
+        address: getSettingValue('Company Address') || '',
+        phone: getSettingValue('Company Phone') || '',
+        email: getSettingValue('Company Email') || ''
+      };
+    }
+  }
+
+  // Activity not found - use defaults
+  return getDefaultProfile();
+}
+
+/**
+ * Get default profile from Settings (fallback)
+ */
+function getDefaultProfile() {
+  return {
+    activity: '',
+    companyNameEN: getSettingValue('Company Name (EN)') || 'Dewan Consulting',
+    companyNameAR: getSettingValue('Company Name (AR)') || 'ديوان للاستشارات',
+    companyNameTR: getSettingValue('Company Name (TR)') || 'DİVAN DANIŞMANLIK',
+    logoUrl: getSettingValue('Company Logo URL') || '',
+    website: '',
+    bankName: getSettingValue('Bank Name') || 'Kuveyt Türk',
+    ibanTRY: getSettingValue('IBAN TRY') || '',
+    ibanUSD: getSettingValue('IBAN USD') || '',
+    swiftCode: getSettingValue('SWIFT Code') || 'KTEFTRIS',
+    address: getSettingValue('Company Address') || '',
+    phone: getSettingValue('Company Phone') || '',
+    email: getSettingValue('Company Email') || ''
+  };
+}
+
+/**
+ * Get client's primary activity from Client Activities sheet
+ * @param {string} clientCode - Client code
+ * @returns {string} - Activity name (e.g. 'Accounting') or empty string
+ */
+function getClientPrimaryActivity(clientCode) {
+  const activities = getClientActivitiesList(clientCode);
+  if (activities.length > 0) {
+    return activities[0].activity;
+  }
+  return '';
+}
+
+function showActivityProfiles() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Activity Profiles');
+  if (sheet) ss.setActiveSheet(sheet);
+  else SpreadsheetApp.getUi().alert('⚠️ Activity Profiles sheet not found!\n\nRun "Setup System" first.');
+}
+
+// ==================== 8. HELPER: ALTERNATING COLORS ====================
 function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   for (let i = 0; i < numRows; i++) {
     const rowRange = sheet.getRange(startRow + i, 1, 1, numCols);
@@ -679,7 +850,7 @@ function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   }
 }
 
-// ==================== 8. GET FUNCTIONS ====================
+// ==================== 9. GET FUNCTIONS ====================
 function getCategoriesList() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Categories');
@@ -754,4 +925,4 @@ function getItemsList(type) {
   return items;
 }
 
-// ==================== END OF PART 2 ====================
+// ==================== END OF PART 2 (v3.1) ====================
