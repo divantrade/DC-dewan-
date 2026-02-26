@@ -130,6 +130,7 @@ function onOpen() {
       .addItem('❌ Remove Triggers', 'removeAllTriggers')
       .addSeparator()
       .addItem('➕ Add Activity (إضافة نشاط)', 'addNewActivity')
+      .addItem('🏷️ Activity Profiles (ملفات الأنشطة)', 'showActivityProfiles')
       .addSeparator()
       .addItem('🔑 Change Password', 'changeAdminPassword')
       .addItem('🔄 Reset Password', 'resetPassword')
