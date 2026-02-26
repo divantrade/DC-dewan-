@@ -786,42 +786,49 @@ function autoGenerateMonthlyInvoices() {
     return;
   }
   
-  // Generate all monthly invoices
+  // Generate all monthly invoices from Client Activities
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const clients = getActiveClients().filter(c => c.monthlyFee > 0);
-    
-    if (clients.length === 0) return;
-    
+    const monthlyActivities = getClientsWithMonthlyFees();
+
+    if (monthlyActivities.length === 0) return;
+
     const invoiceDate = new Date();
     const period = Utilities.formatDate(invoiceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
-    
-    clients.forEach(client => {
+
+    monthlyActivities.forEach(act => {
       const invoiceNo = getNextInvoiceNumber();
-      const clientData = getClientData(client.code);
-      
+      const clientData = getClientData(act.clientCode);
+
+      const serviceLabel = act.activity === 'Accounting'
+        ? 'Monthly Accounting (محاسبة شهرية)'
+        : act.activity === 'Consulting'
+          ? 'Monthly Consulting (استشارات شهرية)'
+          : 'Monthly ' + act.activity;
+
       // Fill template
       fillInvoiceTemplate(ss, {
         invoiceNo: invoiceNo,
         invoiceDate: invoiceDate,
-        clientName: client.nameEN,
+        clientName: act.clientName,
         clientNameAR: clientData ? clientData.nameAR : '',
         taxNumber: clientData ? clientData.taxNumber : '',
         address: clientData ? clientData.address : '',
         period: period,
         items: [{
-          description: 'Monthly Consulting (استشارات شهرية)',
+          item: act.activity,
+          description: serviceLabel,
           qty: 1,
-          unitPrice: client.monthlyFee,
-          total: client.monthlyFee
+          unitPrice: act.monthlyFee,
+          total: act.monthlyFee
         }],
-        currency: client.feeCurrency,
-        subtotal: client.monthlyFee,
+        currency: act.currency,
+        subtotal: act.monthlyFee,
         vat: 0,
         vatRate: 0,
-        total: client.monthlyFee
+        total: act.monthlyFee
       });
-      
+
       // Save PDF
       let pdfUrl = '';
       if (clientData && clientData.folderId) {
@@ -832,33 +839,33 @@ function autoGenerateMonthlyInvoices() {
           console.log('PDF error: ' + e.message);
         }
       }
-      
+
       // Log invoice
       logInvoice({
         invoiceNo: invoiceNo,
         invoiceDate: invoiceDate,
-        clientCode: client.code,
-        clientName: client.nameEN,
-        service: 'Monthly Consulting (استشارات شهرية)',
+        clientCode: act.clientCode,
+        clientName: act.clientName,
+        service: serviceLabel,
         period: period,
-        amount: client.monthlyFee,
-        currency: client.feeCurrency,
+        amount: act.monthlyFee,
+        currency: act.currency,
         status: 'Issued',
         pdfLink: pdfUrl,
         sendEmail: 'Yes',
         emailStatus: 'Pending',
         transCode: ''
       });
-      
+
       // Record transaction
-      recordInvoiceTransaction(invoiceNo, client.code, client.nameEN, client.monthlyFee, client.feeCurrency, 'Monthly Consulting (استشارات شهرية)');
-      
+      recordInvoiceTransaction(invoiceNo, act.clientCode, act.clientName, act.monthlyFee, act.currency, serviceLabel);
+
       incrementInvoiceNumber();
     });
-    
+
     // Log the action
-    logAlert('Auto Invoice', clients.length + ' monthly invoices generated for ' + period, 'Info');
-    
+    logAlert('Auto Invoice', monthlyActivities.length + ' monthly invoices generated for ' + period, 'Info');
+
   } catch (error) {
     console.error('Auto generate error: ' + error);
     logAlert('Auto Invoice Error', error.message, 'Error');

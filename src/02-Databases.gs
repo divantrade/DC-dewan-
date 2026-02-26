@@ -417,7 +417,7 @@ function createActivitiesSheet(ss) {
 
   // Sector validation
   const sectorRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Logistics', 'Trading', 'Inspection', 'Tourism', 'Consulting', 'Other'], true)
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true)
     .build();
   sheet.getRange(2, 6, lastRow, 1).setDataValidation(sectorRule);
 
@@ -503,6 +503,168 @@ function getActivitiesList() {
     }
   }
   return activities;
+}
+
+// ==================== 6b. CLIENT ACTIVITIES SHEET ====================
+function createClientActivitiesSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Client Activities');
+  if (sheet) ss.deleteSheet(sheet);
+
+  sheet = ss.insertSheet('Client Activities');
+  sheet.setTabColor('#00838f');
+
+  const headers = [
+    'Client Code',       // A
+    'Client Name',       // B
+    'Activity',          // C
+    'Fee Type',          // D - Monthly / Per-Job
+    'Monthly Fee',       // E
+    'Currency',          // F
+    'Start Date',        // G
+    'Status',            // H
+    'Notes'              // I
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  const widths = [100, 200, 140, 100, 120, 80, 110, 80, 200];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  const lastRow = 500;
+
+  // Fee Type validation (column D)
+  const feeTypeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Monthly', 'Per-Job'], true)
+    .build();
+  sheet.getRange(2, 4, lastRow, 1).setDataValidation(feeTypeRule);
+
+  // Activity validation (column C)
+  const activityRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true)
+    .build();
+  sheet.getRange(2, 3, lastRow, 1).setDataValidation(activityRule);
+
+  // Currency validation (column F)
+  const currencyRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CURRENCIES, true)
+    .build();
+  sheet.getRange(2, 6, lastRow, 1).setDataValidation(currencyRule);
+
+  // Status validation (column H)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .build();
+  sheet.getRange(2, 8, lastRow, 1).setDataValidation(statusRule);
+
+  // Number formats
+  sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 7, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+
+  // Conditional formatting for Fee Type
+  const feeTypeRange = sheet.getRange(2, 4, lastRow, 1);
+  const statusRange = sheet.getRange(2, 8, lastRow, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Monthly').setBackground('#bbdefb').setRanges([feeTypeRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Per-Job').setBackground('#e1bee7').setRanges([feeTypeRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Inactive').setBackground(COLORS.warning).setRanges([statusRange]).build()
+  ]);
+
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(2);
+
+  // Add notes
+  sheet.getRange('D1').setNote('Monthly = فيز شهري ثابت (Accounting/Consulting)\nPer-Job = حسب المعاملة (Logistics/Inspection/Trading/Tourism)');
+  sheet.getRange('E1').setNote('Monthly Fee: Only for Monthly fee type activities (Accounting/Consulting)');
+
+  return sheet;
+}
+
+function addClientActivity() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Client Activities');
+
+  if (!sheet) {
+    ui.alert('⚠️ Client Activities sheet not found!\n\nRun "Setup System" first.');
+    return;
+  }
+
+  const lastRow = sheet.getLastRow() + 1;
+
+  // Set defaults
+  sheet.getRange(lastRow, 4).setValue('Monthly'); // Fee Type
+  sheet.getRange(lastRow, 6).setValue('TRY'); // Currency
+  sheet.getRange(lastRow, 7).setValue(new Date()); // Start Date
+  sheet.getRange(lastRow, 8).setValue('Active'); // Status
+
+  sheet.setActiveRange(sheet.getRange(lastRow, 1));
+  ss.setActiveSheet(sheet);
+
+  ui.alert(
+    '📋 Add Client Activity (إضافة نشاط عميل)\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'Row: ' + lastRow + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'Required fields:\n' +
+    '• Client Code\n' +
+    '• Activity (Accounting/Consulting/Logistics/...)\n' +
+    '• Fee Type (Monthly/Per-Job)\n' +
+    '• Monthly Fee (for Monthly type only)'
+  );
+}
+
+/**
+ * Get all client activities, optionally filtered
+ * @param {string} [clientCode] - Filter by client code
+ * @param {string} [feeType] - Filter by fee type ('Monthly' or 'Per-Job')
+ * @returns {Array} - List of client activities
+ */
+function getClientActivitiesList(clientCode, feeType) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Client Activities');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const activities = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][7] !== 'Active' || !data[i][0]) continue;
+    if (clientCode && data[i][0] !== clientCode) continue;
+    if (feeType && data[i][3] !== feeType) continue;
+
+    activities.push({
+      clientCode: data[i][0],
+      clientName: data[i][1],
+      activity: data[i][2],
+      feeType: data[i][3],
+      monthlyFee: data[i][4] || 0,
+      currency: data[i][5] || 'TRY',
+      startDate: data[i][6],
+      status: data[i][7],
+      notes: data[i][8] || ''
+    });
+  }
+  return activities;
+}
+
+/**
+ * Get clients with monthly fees (from Client Activities sheet)
+ * Used for monthly invoice generation
+ * @returns {Array} - List of {clientCode, clientName, activity, monthlyFee, currency}
+ */
+function getClientsWithMonthlyFees() {
+  return getClientActivitiesList(null, 'Monthly').filter(a => a.monthlyFee > 0);
 }
 
 // ==================== 7. HELPER: ALTERNATING COLORS ====================

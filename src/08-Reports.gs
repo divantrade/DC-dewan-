@@ -194,13 +194,15 @@ function refreshDashboard() {
   // ===== Client Statistics =====
   const clients = getActiveClients();
   const totalClients = clients.length;
-  const clientsWithFee = clients.filter(c => c.monthlyFee > 0).length;
-  const totalMonthlyRevenue = clients.reduce((sum, c) => sum + (c.monthlyFee || 0), 0);
-  
+  const monthlyActivities = getClientsWithMonthlyFees();
+  const clientsWithFee = [...new Set(monthlyActivities.map(a => a.clientCode))].length;
+  const totalMonthlyRevenue = monthlyActivities.reduce((sum, a) => sum + (a.monthlyFee || 0), 0);
+
   const clientStats = [
     ['Total Active Clients', totalClients],
     ['Clients with Monthly Fee', clientsWithFee],
-    ['Total Monthly Revenue (TRY)', totalMonthlyRevenue]
+    ['Monthly Subscriptions', monthlyActivities.length],
+    ['Total Monthly Revenue', totalMonthlyRevenue]
   ];
   
   sheet.getRange(21, 1, clientStats.length, 2).setValues(clientStats);
@@ -931,35 +933,52 @@ function generateClientsReport() {
     return;
   }
   
-  // Calculate summary
+  // Calculate summary from Client Activities
   const totalClients = clients.length;
-  const totalMonthlyFees = clients.reduce((sum, c) => sum + (c.monthlyFee || 0), 0);
-  const avgFee = totalMonthlyFees / totalClients;
-  
+  const monthlyActs = getClientsWithMonthlyFees();
+  const totalMonthlyFees = monthlyActs.reduce((sum, a) => sum + (a.monthlyFee || 0), 0);
+  const avgFee = monthlyActs.length > 0 ? totalMonthlyFees / monthlyActs.length : 0;
+
   // Group by currency
   const byCurrency = {};
-  clients.forEach(c => {
-    const curr = c.feeCurrency || 'TRY';
+  monthlyActs.forEach(a => {
+    const curr = a.currency || 'TRY';
     if (!byCurrency[curr]) byCurrency[curr] = { count: 0, total: 0 };
     byCurrency[curr].count++;
-    byCurrency[curr].total += c.monthlyFee || 0;
+    byCurrency[curr].total += a.monthlyFee || 0;
   });
-  
+
   let currencyBreakdown = '';
   Object.keys(byCurrency).forEach(curr => {
-    currencyBreakdown += curr + ': ' + byCurrency[curr].count + ' clients, ' + 
+    currencyBreakdown += curr + ': ' + byCurrency[curr].count + ' subscriptions, ' +
                          formatCurrency(byCurrency[curr].total, curr) + '\n';
   });
-  
-  const report = 
+
+  // Group by activity
+  const byActivity = {};
+  monthlyActs.forEach(a => {
+    if (!byActivity[a.activity]) byActivity[a.activity] = { count: 0, total: 0 };
+    byActivity[a.activity].count++;
+    byActivity[a.activity].total += a.monthlyFee || 0;
+  });
+
+  let activityBreakdown = '';
+  Object.keys(byActivity).forEach(act => {
+    activityBreakdown += act + ': ' + byActivity[act].count + ' clients, ' +
+                         formatCurrency(byActivity[act].total, 'TRY') + '\n';
+  });
+
+  const report =
     '📋 CLIENTS REPORT\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Total Active Clients: ' + totalClients + '\n' +
+    'Monthly Subscriptions: ' + monthlyActs.length + '\n' +
     'Total Monthly Revenue: ' + formatCurrency(totalMonthlyFees, 'TRY') + '\n' +
-    'Average Fee/Client: ' + formatCurrency(avgFee, 'TRY') + '\n' +
+    'Average Fee/Subscription: ' + formatCurrency(avgFee, 'TRY') + '\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'By Activity:\n' + activityBreakdown + '\n' +
     'By Currency:\n' + currencyBreakdown;
-  
+
   ui.alert(report);
 }
 

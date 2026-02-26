@@ -17,21 +17,19 @@ function createClientsSheet(ss) {
     'Company Name (EN)',     // B
     'Company Name (AR)',     // C
     'Company Name (TR)',     // D
-    'Company Type',          // E - NEW
+    'Company Type',          // E
     'Tax Number',            // F
     'Tax Office',            // G
     'Address',               // H
     'Phone',                 // I
     'Email',                 // J
     'Contact Person',        // K
-    'Monthly Fee',           // L
-    'Fee Currency',          // M
-    'Language',              // N
-    'Folder ID',             // O
-    'Contract Start',        // P
-    'Status',                // Q
-    'Notes',                 // R
-    'Created Date'           // S
+    'Language',              // L
+    'Folder ID',             // M
+    'Contract Start',        // N
+    'Status',                // O
+    'Notes',                 // P
+    'Created Date'           // Q
   ];
   
   sheet.getRange(1, 1, 1, headers.length)
@@ -41,7 +39,7 @@ function createClientsSheet(ss) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
   
-  const widths = [100, 180, 150, 180, 120, 120, 120, 250, 120, 200, 150, 100, 80, 70, 280, 100, 80, 200, 100];
+  const widths = [100, 180, 150, 180, 120, 120, 120, 250, 120, 200, 150, 70, 280, 100, 80, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
   const lastRow = 500;
@@ -53,28 +51,24 @@ function createClientsSheet(ss) {
     .build();
   sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
 
-  const currencyValidation = SpreadsheetApp.newDataValidation()
-    .requireValueInList(CURRENCIES, true)
-    .build();
-  sheet.getRange(2, 13, lastRow, 1).setDataValidation(currencyValidation);
-
+  // Language validation (column L = 12)
   const languageValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['EN', 'AR', 'TR'], true)
     .build();
-  sheet.getRange(2, 14, lastRow, 1).setDataValidation(languageValidation);
+  sheet.getRange(2, 12, lastRow, 1).setDataValidation(languageValidation);
 
+  // Status validation (column O = 15)
   const statusValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Active', 'Inactive', 'Suspended'], true)
     .build();
-  sheet.getRange(2, 17, lastRow, 1).setDataValidation(statusValidation);
+  sheet.getRange(2, 15, lastRow, 1).setDataValidation(statusValidation);
 
   // Number formats
-  sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 16, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  
-  // Conditional formatting for Status (column Q = 17)
-  const statusRange = sheet.getRange(2, 17, lastRow, 1);
+  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('dd.mm.yyyy'); // Contract Start
+  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy'); // Created Date
+
+  // Conditional formatting for Status (column O = 15)
+  const statusRange = sheet.getRange(2, 15, lastRow, 1);
   sheet.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
@@ -89,7 +83,7 @@ function createClientsSheet(ss) {
   
   // Add notes
   sheet.getRange('A1').setNote('Client Code: Auto-generated (CLT-001, CLT-002, ...)');
-  sheet.getRange('N1').setNote('Folder ID: Google Drive folder for invoices');
+  sheet.getRange('M1').setNote('Folder ID: Google Drive folder for invoices');
   
   return sheet;
 }
@@ -110,14 +104,13 @@ function addNewClient() {
   // Set defaults
   sheet.getRange(lastRow, 1).setValue(newCode);
   sheet.getRange(lastRow, 5).setValue('Limited'); // Company Type
-  sheet.getRange(lastRow, 13).setValue('TRY'); // Fee Currency
-  sheet.getRange(lastRow, 14).setValue('AR'); // Language
-  sheet.getRange(lastRow, 17).setValue('Active'); // Status
-  sheet.getRange(lastRow, 19).setValue(new Date()); // Created Date
-  
+  sheet.getRange(lastRow, 12).setValue('AR'); // Language
+  sheet.getRange(lastRow, 15).setValue('Active'); // Status
+  sheet.getRange(lastRow, 17).setValue(new Date()); // Created Date
+
   sheet.setActiveRange(sheet.getRange(lastRow, 2));
   ss.setActiveSheet(sheet);
-  
+
   ui.alert(
     '👤 Add New Client (إضافة عميل جديد)\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
@@ -128,8 +121,8 @@ function addNewClient() {
     '• Company Name (EN/AR/TR)\n' +
     '• Tax Number\n' +
     '• Email\n' +
-    '• Monthly Fee\n' +
-    '• Folder ID (for invoices)'
+    '• Folder ID (for invoices)\n\n' +
+    'Then add activities in "Client Activities" sheet'
   );
 }
 
@@ -209,8 +202,6 @@ function getClientData(clientCode) {
         phone: data[i][cols['Phone']] || '',
         email: data[i][cols['Email']] || '',
         contactPerson: data[i][cols['Contact Person']] || '',
-        monthlyFee: data[i][cols['Monthly Fee']] || 0,
-        feeCurrency: data[i][cols['Fee Currency']] || 'TRY',
         language: data[i][cols['Language']] || 'AR',
         folderId: data[i][cols['Folder ID']] || '',
         contractStart: data[i][cols['Contract Start']] || '',
@@ -243,8 +234,6 @@ function getActiveClients() {
         nameEN: data[i][cols['Company Name (EN)']],
         nameAR: data[i][cols['Company Name (AR)']],
         nameTR: data[i][cols['Company Name (TR)']],
-        monthlyFee: data[i][cols['Monthly Fee']] || 0,
-        feeCurrency: data[i][cols['Fee Currency']] || 'TRY',
         email: data[i][cols['Email']] || '',
         folderId: data[i][cols['Folder ID']] || '',
         language: data[i][cols['Language']] || 'AR',

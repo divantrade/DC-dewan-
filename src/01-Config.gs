@@ -62,6 +62,8 @@ function onOpen() {
       .addSeparator()
       .addItem('🔢 Generate Missing Codes (توليد الأكواد)', 'generateMissingClientCodes')
       .addSeparator()
+      .addItem('📋 Add Client Activity (نشاط عميل)', 'addClientActivity')
+      .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
       .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
       .addSeparator()
@@ -268,7 +270,7 @@ function getSheetGroups() {
     },
     'databases': {
       name: '🗄️ Databases',
-      patterns: ['Clients', 'Vendors', 'Employees', 'Items Database', 'Activities', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
+      patterns: ['Clients', 'Client Activities', 'Vendors', 'Employees', 'Items Database', 'Activities', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
     },
     'settings': {
       name: '⚙️ Settings',
