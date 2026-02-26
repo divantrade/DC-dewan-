@@ -696,59 +696,69 @@ function generateCustomInvoice() {
 function generateAllMonthlyInvoices() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  
-  const clients = getActiveClients().filter(c => c.monthlyFee > 0);
-  
-  if (clients.length === 0) {
-    ui.alert('⚠️ No clients with monthly fees found!');
+
+  // Get clients with monthly fees from Client Activities sheet
+  const monthlyActivities = getClientsWithMonthlyFees();
+
+  if (monthlyActivities.length === 0) {
+    ui.alert('⚠️ No clients with monthly fees found!\n\nAdd monthly fee activities in "Client Activities" sheet.');
     return;
   }
-  
-  const clientsList = clients.map(c => '• ' + c.nameEN + ': ' + formatCurrency(c.monthlyFee, c.feeCurrency)).join('\n');
-  
+
+  const clientsList = monthlyActivities.map(a =>
+    '• ' + a.clientName + ' [' + a.activity + ']: ' + formatCurrency(a.monthlyFee, a.currency)
+  ).join('\n');
+
   const confirm = ui.alert(
     '📋 Generate All Monthly Invoices\n\n' +
-    'This will create invoices for ' + clients.length + ' clients:\n\n' +
+    'This will create invoices for ' + monthlyActivities.length + ' activity subscriptions:\n\n' +
     clientsList + '\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
-  
+
   if (confirm !== ui.Button.YES) return;
-  
+
   const invoiceDate = new Date();
   const period = Utilities.formatDate(invoiceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
   let generated = 0;
   let pdfSaved = 0;
-  
-  clients.forEach(client => {
+
+  monthlyActivities.forEach(act => {
     const invoiceNo = getNextInvoiceNumber();
-    const clientData = getClientData(client.code);
-    
+    const clientData = getClientData(act.clientCode);
+
+    // Determine service label based on activity
+    const serviceLabel = act.activity === 'Accounting'
+      ? 'Monthly Accounting (محاسبة شهرية)'
+      : act.activity === 'Consulting'
+        ? 'Monthly Consulting (استشارات شهرية)'
+        : 'Monthly ' + act.activity;
+
     // Fill template for each (to create PDF)
     fillInvoiceTemplate(ss, {
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
-      clientName: client.nameEN,
+      clientName: act.clientName,
       clientNameAR: clientData ? clientData.nameAR : '',
       companyType: clientData ? clientData.companyType : '',
       taxNumber: clientData ? clientData.taxNumber : '',
       address: clientData ? clientData.address : '',
       period: period,
       items: [{
-        item: 'Monthly Consulting',
-        description: 'استشارات شهرية',
+        item: act.activity,
+        description: serviceLabel,
         qty: 1,
-        unitPrice: client.monthlyFee,
-        total: client.monthlyFee
+        unitPrice: act.monthlyFee,
+        total: act.monthlyFee
       }],
-      currency: client.feeCurrency,
-      subtotal: client.monthlyFee,
+      currency: act.currency,
+      subtotal: act.monthlyFee,
       vat: 0,
       vatRate: 0,
-      total: client.monthlyFee
+      total: act.monthlyFee
     });
-    
+
     // Save PDF
     let pdfUrl = '';
     if (clientData && clientData.folderId) {
@@ -757,34 +767,34 @@ function generateAllMonthlyInvoices() {
         pdfUrl = pdfResult.url;
         pdfSaved++;
       } catch (e) {
-        console.log('PDF error for ' + client.code + ': ' + e.message);
+        console.log('PDF error for ' + act.clientCode + ': ' + e.message);
       }
     }
-    
+
     // Log invoice
     logInvoice({
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
-      clientCode: client.code,
-      clientName: client.nameEN,
-      service: 'Monthly Consulting (استشارات شهرية)',
+      clientCode: act.clientCode,
+      clientName: act.clientName,
+      service: serviceLabel,
       period: period,
-      amount: client.monthlyFee,
-      currency: client.feeCurrency,
+      amount: act.monthlyFee,
+      currency: act.currency,
       status: 'Issued',
       pdfLink: pdfUrl,
       sendEmail: 'Yes',
       emailStatus: 'Pending',
       transCode: ''
     });
-    
+
     // Record transaction
-    recordInvoiceTransaction(invoiceNo, client.code, client.nameEN, client.monthlyFee, client.feeCurrency, 'Monthly Consulting (استشارات شهرية)');
-    
+    recordInvoiceTransaction(invoiceNo, act.clientCode, act.clientName, act.monthlyFee, act.currency, serviceLabel);
+
     incrementInvoiceNumber();
     generated++;
   });
-  
+
   ui.alert(
     '✅ Monthly Invoices Generated!\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
