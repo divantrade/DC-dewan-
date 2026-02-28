@@ -147,6 +147,17 @@ function onOpen() {
       .addItem('🗑️ Remove All Triggers', 'removeAllTriggers')
       .addSeparator()
       .addItem('📅 Test Invoice Schedule', 'testInvoiceSchedule'))
+    // Import
+    .addSubMenu(ui.createMenu('📥 Import (استيراد)')
+      .addItem('📋 Create Import Sheet (إنشاء شيت الاستيراد)', 'createImportSheet')
+      .addItem('📋 Create Opening Balances Sheet', 'createOpeningBalancesImportSheet')
+      .addSeparator()
+      .addItem('📥 Import Transactions from Sheet', 'importTransactionsFromSheet')
+      .addItem('📥 Import Opening Balances', 'importOpeningBalances')
+      .addSeparator()
+      .addItem('🗑️ Clear Import Sheet', 'clearImportSheet')
+      .addItem('🗑️ Clear Opening Balances Sheet', 'clearOpeningBalancesSheet'))
+
     // Help
     .addSeparator()
     .addItem('📖 User Guide (دليل المستخدم)', 'showUserGuide')
