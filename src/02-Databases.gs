@@ -431,10 +431,10 @@ function createSectorProfilesSheet(ss) {
   const data = [
     ['ACC', 'Accounting',  'محاسبة',      'Muhasebe',      'Dewan Accounting',  'ديوان للمحاسبة',    'DİVAN MUHASEBECİLİK', '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
     ['CON', 'Consulting',  'استشارات',     'Danışmanlık',   'Dewan Consulting',  'ديوان للاستشارات',   'DİVAN DANIŞMANLIK',   '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
-    ['LOG', 'Logistics',   'لوجستيات',     'Lojistik',      'Dewan Logistics',   'ديوان للوجستيات',    'DİVAN LOJİSTİK',      '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
-    ['TRD', 'Trading',     'تجارة',        'Ticaret',       'Dewan Trading',     'ديوان للتجارة',      'DİVAN TİCARET',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
-    ['INS', 'Inspection',  'تفتيش',        'Denetim',       'Dewan Inspection',  'ديوان للتفتيش',      'DİVAN DENETİM',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
-    ['TUR', 'Tourism',     'سياحة',        'Turizm',        'Dewan Tourism',     'ديوان للسياحة',      'DİVAN TURİZM',         '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', '']
+    ['LOG', 'Logistics',   'لوجستيات',     'Lojistik',      'DVN Log',           'دي في ان لوجيستك',   'DİVAN LOJİSTİK',      '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['TRD', 'Trading',     'تجارة',        'Ticaret',       'Divan Trading',     'ديوان للتجارة',      'DİVAN TİCARET',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['INS', 'Inspection',  'تفتيش',        'Denetim',       'Certify',           'سيرتفاي',           'CERTİFY',              '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['TUR', 'Tourism',     'سياحة',        'Turizm',        'Divan Tours',       'ديوان للسياحة',      'DİVAN TURİZM',         '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', '']
   ];
 
   sheet.getRange(2, 1, data.length, headers.length).setValues(data);

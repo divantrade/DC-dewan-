@@ -117,8 +117,8 @@ function createInvoiceTemplateSheet(ss) {
   // Row 1: Logo (centered) - if provided
   if (logoUrl) {
     sheet.getRange('A1:F1').merge();
-    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
-    sheet.setRowHeight(1, 60);
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 4, 90, 220)');
+    sheet.setRowHeight(1, 100);
     sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
     currentRow = 2;
   }
@@ -834,8 +834,8 @@ function fillInvoiceTemplate(ss, data) {
 
   // Row 1: Logo
   if (hasLogo) {
-    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
-    sheet.setRowHeight(1, 60);
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 4, 90, 220)');
+    sheet.setRowHeight(1, 100);
   } else {
     sheet.getRange('A1').clearContent();
     sheet.setRowHeight(1, 20);
