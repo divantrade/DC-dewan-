@@ -74,7 +74,7 @@ function createTransactionsSheet(ss) {
   const headers = [
     '#',                      // A (1)
     'Date (التاريخ)',         // B (2)
-    'Activity (النشاط)',      // C (3)
+    'Sector (القطاع)',        // C (3)
     'Movement Type (نوع الحركة)', // D (4)
     'Category (التصنيف)',     // E (5)
     'Client Code (كود العميل)', // F (6)
@@ -118,7 +118,7 @@ function createTransactionsSheet(ss) {
   
   // ===== Static Data Validations =====
 
-  // Activity (C) - Dynamic, set by refreshActivityDropdown()
+  // Sector (C) - Dynamic, set by refreshSectorDropdown()
 
   // Movement Type (D)
   const movementRule = SpreadsheetApp.newDataValidation()
@@ -206,7 +206,7 @@ function createTransactionsSheet(ss) {
   sheet.setFrozenColumns(2);
   
   // Add notes
-  sheet.getRange('C1').setNote('Activity: اختر النشاط/خط الأعمال');
+  sheet.getRange('C1').setNote('Sector: اختر القطاع/خط الأعمال');
   sheet.getRange('F1').setNote('Client Code: اختر الكود → الاسم يُملأ تلقائياً');
   sheet.getRange('G1').setNote('Client Name: اختر الاسم → الكود يُملأ تلقائياً');
   sheet.getRange('K1').setNote('Party Type: اختر النوع → يتغير dropdown في Party Name');
@@ -503,43 +503,48 @@ function updatePartyNameDropdown(ss, sheet, row, partyType) {
   }
 }
 
-// ==================== 5.5 REFRESH ACTIVITY DROPDOWN ====================
+// ==================== 5.5 REFRESH SECTOR DROPDOWN ====================
 /**
- * تحديث dropdown الأنشطة من شيت Activities
+ * تحديث dropdown القطاعات من شيت Sector Profiles
  */
-function refreshActivityDropdown() {
+function refreshSectorDropdown() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const transSheet = ss.getSheetByName('Transactions');
-  const activitiesSheet = ss.getSheetByName('Activities');
+  const sectorsSheet = ss.getSheetByName('Sector Profiles');
 
-  if (!transSheet || !activitiesSheet) return;
+  if (!transSheet || !sectorsSheet) return;
 
-  const lastActivityRow = activitiesSheet.getLastRow();
-  if (lastActivityRow < 2) return;
+  const lastSectorRow = sectorsSheet.getLastRow();
+  if (lastSectorRow < 2) return;
 
   const lastRow = 1000;
 
-  const activityData = activitiesSheet.getRange(2, 1, lastActivityRow - 1, 7).getValues();
-  const activities = [];
+  const sectorData = sectorsSheet.getRange(2, 1, lastSectorRow - 1, 14).getValues();
+  const sectors = [];
 
-  activityData.forEach(row => {
-    const nameEN = row[1]; // B = Name EN
-    const nameAR = row[2]; // C = Name AR
-    const status = row[6]; // G = Status
+  sectorData.forEach(row => {
+    const nameEN = row[1]; // B = Sector Name EN
+    const nameAR = row[2]; // C = Sector Name AR
+    const status = row[13]; // N = Status
 
     if (nameEN && status === 'Active') {
-      activities.push(nameEN + ' (' + (nameAR || nameEN) + ')');
+      sectors.push(nameEN + ' (' + (nameAR || nameEN) + ')');
     }
   });
 
-  if (activities.length === 0) return;
+  if (sectors.length === 0) return;
 
-  // Activity Dropdown (Column C)
-  const activityRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(activities, true)
+  // Sector Dropdown (Column C)
+  const sectorRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(sectors, true)
     .setAllowInvalid(true)
     .build();
-  transSheet.getRange(2, 3, lastRow, 1).setDataValidation(activityRule);
+  transSheet.getRange(2, 3, lastRow, 1).setDataValidation(sectorRule);
+}
+
+// Backward-compatible alias
+function refreshActivityDropdown() {
+  refreshSectorDropdown();
 }
 
 // ==================== 6. SETUP ALL TRANSACTION DROPDOWNS ====================
@@ -556,8 +561,8 @@ function setupTransactionDropdowns() {
     return;
   }
 
-  // 1. Activity Dropdown
-  refreshActivityDropdown();
+  // 1. Sector Dropdown
+  refreshSectorDropdown();
 
   // 2. Client Dropdowns (Code & Name)
   refreshClientDropdowns();
@@ -572,7 +577,7 @@ function setupTransactionDropdowns() {
 
   ui.alert(
     '✅ Dropdowns Setup Complete!\n\n' +
-    '• Activity ✓ (ديناميكي)\n' +
+    '• Sector ✓ (ديناميكي)\n' +
     '• Client Code ✓ (ديناميكي)\n' +
     '• Client Name ✓ (ديناميكي)\n' +
     '• Items ✓ (ديناميكي)\n' +
@@ -587,7 +592,7 @@ function setupTransactionDropdowns() {
 }
 
 function refreshAllDropdowns() {
-  refreshActivityDropdown();
+  refreshSectorDropdown();
   refreshClientDropdowns();
   refreshItemsDropdown();
   refreshCashBankDropdown();
@@ -800,9 +805,9 @@ function onEdit(e) {
     refreshItemsDropdown();
   }
 
-  if (sheetName === 'Activities' && row >= 2) {
+  if (sheetName === 'Sector Profiles' && row >= 2) {
     Utilities.sleep(300);
-    refreshActivityDropdown();
+    refreshSectorDropdown();
   }
 }
 

@@ -285,47 +285,56 @@ function createVendorsSheet(ss) {
     'Email',                 // I
     'Contact Person',        // J
     'Category',              // K
-    'Payment Terms',         // L
-    'Currency',              // M
-    'Bank Name',             // N
-    'IBAN',                  // O
-    'Status',                // P
-    'Notes',                 // Q
-    'Created Date'           // R
+    'Sector',                // L - Which business sector this vendor serves
+    'Payment Terms',         // M
+    'Currency',              // N
+    'Bank Name',             // O
+    'IBAN',                  // P
+    'Status',                // Q
+    'Notes',                 // R
+    'Created Date'           // S
   ];
-  
+
   sheet.getRange(1, 1, 1, headers.length)
     .setValues([headers])
     .setBackground('#e65100')
     .setFontColor(COLORS.headerText)
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
-  
-  const widths = [100, 180, 150, 180, 120, 120, 250, 120, 200, 150, 120, 100, 80, 150, 250, 80, 200, 100];
+
+  const widths = [100, 180, 150, 180, 120, 120, 250, 120, 200, 150, 120, 120, 100, 80, 150, 250, 80, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
   const lastRow = 500;
-  
-  // Category validation
+
+  // Category validation (column K = 11)
   const categoryValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Rent', 'Utilities', 'Services', 'Supplies', 'Government', 'Insurance', 'Other'], true)
     .build();
   sheet.getRange(2, 11, lastRow, 1).setDataValidation(categoryValidation);
-  
-  // Currency validation
+
+  // Sector validation (column L = 12)
+  const sectorValidation = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'All', 'Other'], true)
+    .build();
+  sheet.getRange(2, 12, lastRow, 1).setDataValidation(sectorValidation);
+
+  // Currency validation (column N = 14)
   const currencyValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(CURRENCIES, true)
     .build();
-  sheet.getRange(2, 13, lastRow, 1).setDataValidation(currencyValidation);
-  
-  // Status validation
+  sheet.getRange(2, 14, lastRow, 1).setDataValidation(currencyValidation);
+
+  // Status validation (column Q = 17)
   const statusValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Active', 'Inactive'], true)
     .build();
-  sheet.getRange(2, 16, lastRow, 1).setDataValidation(statusValidation);
-  
-  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+  sheet.getRange(2, 17, lastRow, 1).setDataValidation(statusValidation);
+
+  sheet.getRange(2, 19, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
+
+  sheet.getRange('L1').setNote('Sector: القطاع الذي يخدمه المورد\nAll = يخدم كل القطاعات');
   
   return sheet;
 }
@@ -344,9 +353,9 @@ function addNewVendor() {
   const newCode = generateNextCode('VND', sheet, 1);
   
   sheet.getRange(lastRow, 1).setValue(newCode);
-  sheet.getRange(lastRow, 13).setValue('TRY');
-  sheet.getRange(lastRow, 16).setValue('Active');
-  sheet.getRange(lastRow, 18).setValue(new Date());
+  sheet.getRange(lastRow, 14).setValue('TRY');      // Currency (col N)
+  sheet.getRange(lastRow, 17).setValue('Active');    // Status (col Q)
+  sheet.getRange(lastRow, 19).setValue(new Date());  // Created Date (col S)
   
   sheet.setActiveRange(sheet.getRange(lastRow, 2));
   ss.setActiveSheet(sheet);
@@ -367,7 +376,7 @@ function getActiveVendors() {
   const vendors = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][15] === 'Active' && data[i][1]) {
+    if (data[i][16] === 'Active' && data[i][1]) {  // Status is col Q (index 16)
       vendors.push({
         code: data[i][0],
         nameEN: data[i][1],
@@ -398,14 +407,15 @@ function createEmployeesSheet(ss) {
     'Email',                 // G
     'Position',              // H
     'Department',            // I
-    'Start Date',            // J
-    'Salary',                // K
-    'Currency',              // L
-    'Bank Name',             // M
-    'IBAN',                  // N
-    'Status',                // O
-    'Notes',                 // P
-    'Created Date'           // Q
+    'Sector',                // J - Which business sector this employee works in
+    'Start Date',            // K
+    'Salary',                // L
+    'Currency',              // M
+    'Bank Name',             // N
+    'IBAN',                  // O
+    'Status',                // P
+    'Notes',                 // Q
+    'Created Date'           // R
   ];
   
   sheet.getRange(1, 1, 1, headers.length)
@@ -415,30 +425,38 @@ function createEmployeesSheet(ss) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
   
-  const widths = [100, 160, 140, 160, 120, 120, 200, 150, 120, 100, 100, 80, 150, 250, 80, 200, 100];
+  const widths = [100, 160, 140, 160, 120, 120, 200, 150, 120, 120, 100, 100, 80, 150, 250, 80, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
   const lastRow = 200;
-  
-  // Currency validation
+
+  // Sector validation (column J = 10)
+  const sectorValidation = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'All', 'Other'], true)
+    .build();
+  sheet.getRange(2, 10, lastRow, 1).setDataValidation(sectorValidation);
+
+  // Currency validation (column M = 13)
   const currencyValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(CURRENCIES, true)
     .build();
-  sheet.getRange(2, 12, lastRow, 1).setDataValidation(currencyValidation);
-  
-  // Status validation
+  sheet.getRange(2, 13, lastRow, 1).setDataValidation(currencyValidation);
+
+  // Status validation (column P = 16)
   const statusValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Active', 'Inactive', 'On Leave'], true)
     .build();
-  sheet.getRange(2, 15, lastRow, 1).setDataValidation(statusValidation);
-  
+  sheet.getRange(2, 16, lastRow, 1).setDataValidation(statusValidation);
+
   // Number formats
-  sheet.getRange(2, 10, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy');
-  
+  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('dd.mm.yyyy');  // Start Date (col K)
+  sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');    // Salary (col L)
+  sheet.getRange(2, 18, lastRow, 1).setNumberFormat('dd.mm.yyyy');  // Created Date (col R)
+
   sheet.setFrozenRows(1);
-  
+
+  sheet.getRange('J1').setNote('Sector: القطاع الذي يعمل فيه الموظف\nAll = يعمل في كل القطاعات');
+
   return sheet;
 }
 
@@ -456,9 +474,9 @@ function addNewEmployee() {
   const newCode = generateNextCode('EMP', sheet, 1);
   
   sheet.getRange(lastRow, 1).setValue(newCode);
-  sheet.getRange(lastRow, 12).setValue('TRY');
-  sheet.getRange(lastRow, 15).setValue('Active');
-  sheet.getRange(lastRow, 17).setValue(new Date());
+  sheet.getRange(lastRow, 13).setValue('TRY');      // Currency (col M)
+  sheet.getRange(lastRow, 16).setValue('Active');    // Status (col P)
+  sheet.getRange(lastRow, 18).setValue(new Date());  // Created Date (col R)
   
   sheet.setActiveRange(sheet.getRange(lastRow, 2));
   ss.setActiveSheet(sheet);
@@ -479,7 +497,7 @@ function getActiveEmployees() {
   const employees = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][14] === 'Active' && data[i][1]) {
+    if (data[i][15] === 'Active' && data[i][1]) {  // Status is col P (index 15)
       employees.push({
         code: data[i][0],
         nameEN: data[i][1],
