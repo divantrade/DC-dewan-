@@ -933,7 +933,7 @@ function generateClientsReport() {
     return;
   }
   
-  // Calculate summary from Client Activities
+  // Calculate summary from Client Sector
   const totalClients = clients.length;
   const monthlyActs = getClientsWithMonthlyFees();
   const totalMonthlyFees = monthlyActs.reduce((sum, a) => sum + (a.monthlyFee || 0), 0);
