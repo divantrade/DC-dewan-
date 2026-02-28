@@ -51,6 +51,7 @@ function onOpen() {
       .addItem('📧 Send Pending Invoices', 'sendPendingInvoices')
       .addItem('👁️ Preview Invoice', 'previewInvoice')
       .addSeparator()
+      .addItem('🖼️ Add Logo to Template', 'updateInvoiceLogo')
       .addItem('📊 Invoice Log', 'showInvoiceLog'))
     
     // Clients & Parties
@@ -59,21 +60,24 @@ function onOpen() {
       .addItem('➕ Add Vendor (إضافة مورد)', 'addNewVendor')
       .addItem('➕ Add Employee (إضافة موظف)', 'addNewEmployee')
       .addSeparator()
-      .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
-      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
+      .addItem('🔢 Generate Missing Codes (توليد الأكواد)', 'generateMissingClientCodes')
       .addSeparator()
-      .addItem('🏢 Add Company Type Column', 'addCompanyTypeColumn'))
+      .addItem('📋 Add Client Sector (قطاع عميل)', 'addClientSector')
+      .addSeparator()
+      .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
+      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability'))
     
     // Cash & Bank
     .addSubMenu(ui.createMenu('🏦 Cash & Bank (الخزائن والبنوك)')
       .addItem('➕ Add Cash Box (إضافة خزينة)', 'addNewCashBox')
       .addItem('➕ Add Bank Account (إضافة حساب بنكي)', 'addNewBankAccount')
-      .addItem('🔄 Create Cash/Bank Sheets', 'createCashBankSheetsFromDatabase')
       .addSeparator()
+      .addItem('🔄 Create Cash/Bank Sheets', 'createCashBankSheetsFromDatabase')
       .addItem('🔄 Sync to Cash/Bank (مزامنة)', 'syncAllCashAndBankSheets')
       .addSeparator()
       .addItem('📊 View Cash Boxes', 'showCashBoxes')
-      .addItem('📊 View Bank Accounts', 'showBankAccounts'))
+      .addItem('📊 View Bank Accounts', 'showBankAccounts')
+      .addItem('📊 Bank Summary (ملخص البنوك)', 'showBankAccountsSummary'))
 
     // Advances (العهد)
     .addSubMenu(ui.createMenu('💼 Advances (العهد)')
@@ -124,6 +128,9 @@ function onOpen() {
       .addItem('⏰ Setup Triggers', 'setupTriggers')
       .addItem('❌ Remove Triggers', 'removeAllTriggers')
       .addSeparator()
+      .addItem('➕ Add Sector (إضافة قطاع)', 'addNewSector')
+      .addItem('🏷️ Sector Profiles (ملفات القطاعات)', 'showSectorProfiles')
+      .addSeparator()
       .addItem('🔑 Change Password', 'changeAdminPassword')
       .addItem('🔄 Reset Password', 'resetPassword')
       .addSeparator()
@@ -141,6 +148,17 @@ function onOpen() {
       .addItem('🗑️ Remove All Triggers', 'removeAllTriggers')
       .addSeparator()
       .addItem('📅 Test Invoice Schedule', 'testInvoiceSchedule'))
+    // Import
+    .addSubMenu(ui.createMenu('📥 Import (استيراد)')
+      .addItem('📋 Create Import Sheet (إنشاء شيت الاستيراد)', 'createImportSheet')
+      .addItem('📋 Create Opening Balances Sheet', 'createOpeningBalancesImportSheet')
+      .addSeparator()
+      .addItem('📥 Import Transactions from Sheet', 'importTransactionsFromSheet')
+      .addItem('📥 Import Opening Balances', 'importOpeningBalances')
+      .addSeparator()
+      .addItem('🗑️ Clear Import Sheet', 'clearImportSheet')
+      .addItem('🗑️ Clear Opening Balances Sheet', 'clearOpeningBalancesSheet'))
+
     // Help
     .addSeparator()
     .addItem('📖 User Guide (دليل المستخدم)', 'showUserGuide')
@@ -152,6 +170,7 @@ function onOpen() {
   // تحديث الـ Dropdowns تلقائياً عند فتح الشيت
   // ══════════════════════════════════════════════════════════════════
   try {
+    refreshSectorDropdown();
     refreshClientDropdowns();
     refreshItemsDropdown();
     refreshCashBankDropdown();
@@ -262,7 +281,7 @@ function getSheetGroups() {
     },
     'databases': {
       name: '🗄️ Databases',
-      patterns: ['Clients', 'Vendors', 'Employees', 'Items Database', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
+      patterns: ['Clients', 'Client Sector', 'Vendors', 'Employees', 'Items Database', 'Sector Profiles', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
     },
     'settings': {
       name: '⚙️ Settings',

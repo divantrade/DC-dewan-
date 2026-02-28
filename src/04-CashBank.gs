@@ -57,7 +57,7 @@ function createCashBoxesDatabase(ss) {
   sheet.getRange(2, 10, 100, 1).setDataValidation(sheetCreatedRule);
   
   sheet.getRange(2, 6, 100, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 7, 100, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 7, 100, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -189,7 +189,7 @@ function createBankAccountsDatabase(ss) {
   sheet.getRange(2, 11, 100, 1).setDataValidation(statusRule);
   
   sheet.getRange(2, 9, 100, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 10, 100, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 10, 100, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -312,21 +312,21 @@ function createSingleCashSheet(ss, cashName, currency, openingBalance) {
     .setFontWeight('bold');
   
   // Opening Balance row
-  sheet.getRange('A4').setValue(new Date()).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yyyy');
   sheet.getRange('B4').setValue('Opening Balance (رصيد افتتاحي)');
   sheet.getRange('F4').setValue(openingBalance).setNumberFormat('#,##0.00');
   sheet.getRange('G4').setValue('IN');
   sheet.getRange('H4').setFormula('=F4').setNumberFormat('#,##0.00');
-  
+
   // Column widths
   const widths = [100, 200, 120, 150, 120, 120, 80, 120];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
   // Direction validation
   const dirRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['IN', 'OUT'], true).build();
   sheet.getRange('G4:G1000').setDataValidation(dirRule);
-  
+
   // Conditional formatting
   const dirRange = sheet.getRange('G4:G1000');
   sheet.setConditionalFormatRules([
@@ -335,8 +335,8 @@ function createSingleCashSheet(ss, cashName, currency, openingBalance) {
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo('OUT').setBackground(COLORS.danger).setRanges([dirRange]).build()
   ]);
-  
-  sheet.getRange('A4:A1000').setNumberFormat('yyyy-mm-dd');
+
+  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yyyy');
   sheet.getRange('F4:F1000').setNumberFormat('#,##0.00');
   sheet.getRange('H4:H1000').setNumberFormat('#,##0.00');
   sheet.setFrozenRows(3);
@@ -379,19 +379,19 @@ function createSingleBankSheet(ss, accountName, currency, openingBalance) {
     .setFontWeight('bold');
   
   // Opening Balance row
-  sheet.getRange('A4').setValue(new Date()).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('A4').setValue(new Date()).setNumberFormat('dd.mm.yyyy');
   sheet.getRange('B4').setValue('Opening Balance (رصيد افتتاحي)');
   sheet.getRange('F4').setValue(openingBalance).setNumberFormat('#,##0.00');
   sheet.getRange('G4').setValue('IN');
   sheet.getRange('H4').setFormula('=F4').setNumberFormat('#,##0.00');
-  
+
   const widths = [100, 200, 120, 150, 120, 120, 80, 120];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-  
+
   const dirRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['IN', 'OUT'], true).build();
   sheet.getRange('G4:G1000').setDataValidation(dirRule);
-  
+
   const dirRange = sheet.getRange('G4:G1000');
   sheet.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule()
@@ -399,8 +399,8 @@ function createSingleBankSheet(ss, accountName, currency, openingBalance) {
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo('OUT').setBackground(COLORS.danger).setRanges([dirRange]).build()
   ]);
-  
-  sheet.getRange('A4:A1000').setNumberFormat('yyyy-mm-dd');
+
+  sheet.getRange('A4:A1000').setNumberFormat('dd.mm.yyyy');
   sheet.getRange('F4:F1000').setNumberFormat('#,##0.00');
   sheet.getRange('H4:H1000').setNumberFormat('#,##0.00');
   sheet.setFrozenRows(3);
@@ -545,7 +545,7 @@ function addCashBankEntry(sheetName, date, description, reference, party, transC
   
   const lastRow = sheet.getLastRow() + 1;
   
-  sheet.getRange(lastRow, 1).setValue(date).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(lastRow, 1).setValue(date).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(lastRow, 2).setValue(description);
   sheet.getRange(lastRow, 3).setValue(reference);
   sheet.getRange(lastRow, 4).setValue(party);
@@ -835,13 +835,13 @@ function syncAllCashAndBankSheets() {
   // Find column indices
   const colIndex = {
     date: 1,           // B
-    movementType: 2,   // C
-    description: 7,    // H
-    partyName: 8,      // I
-    amount: 10,        // K
-    paymentMethod: 14, // O
-    cashBank: 15,      // P
-    reference: 16,     // Q
+    movementType: 3,   // D
+    description: 8,    // I
+    partyName: 9,      // J
+    amount: 11,        // L
+    paymentMethod: 15, // P
+    cashBank: 16,      // Q
+    reference: 17,     // R
     transNum: 0        // A
   };
   
@@ -884,11 +884,13 @@ function syncAllCashAndBankSheets() {
       continue;
     }
     
-    // Extract sheet name from dropdown value (remove emoji and currency)
+    // Extract sheet name from dropdown value (remove emoji, IBAN suffix, and currency)
     // Format: "💰 Cash TRY - Main (TRY)" → "Cash TRY - Main"
+    // Format: "🏦 KT - TRY - Ana Hesap [..7002] (TRY)" → "KT - TRY - Ana Hesap"
     let sheetName = cashBankName
       .replace(/^💰\s*/, '')
       .replace(/^🏦\s*/, '')
+      .replace(/\s*\[\.\.\d{4}\]/, '')
       .replace(/\s*\([A-Z]{3}\)$/, '')
       .trim();
     
@@ -942,4 +944,70 @@ function syncAllCashAndBankSheets() {
     '❌ Errors: ' + errors
   );
 }
+// ==================== 9. BANK SUMMARY ====================
+
+/**
+ * عرض ملخص كل حسابات البنوك مع IBAN وأرصدة
+ */
+function showBankAccountsSummary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  const bankSheet = ss.getSheetByName('Bank Accounts');
+  if (!bankSheet || bankSheet.getLastRow() < 2) {
+    ui.alert('⚠️ No bank accounts found!');
+    return;
+  }
+
+  const data = bankSheet.getRange(2, 1, bankSheet.getLastRow() - 1, 13).getValues();
+
+  // Group by bank name
+  const banks = {};
+  for (const row of data) {
+    const code = row[0];
+    const name = row[1];
+    const bankName = row[2];
+    const currency = row[3];
+    const iban = row[4] || 'No IBAN';
+    const status = row[10];
+
+    if (!bankName) continue;
+
+    if (!banks[bankName]) banks[bankName] = [];
+
+    const ibanLast4 = iban.length >= 4 ? iban.slice(-4) : iban;
+    const balance = getCashBankBalance(name);
+
+    banks[bankName].push({
+      code: code,
+      name: name,
+      currency: currency,
+      iban: iban,
+      ibanLast4: ibanLast4,
+      status: status,
+      balance: balance
+    });
+  }
+
+  // Build summary
+  let summary = '🏦 Bank Accounts Summary\n' + '═'.repeat(40) + '\n\n';
+
+  for (const [bankName, accounts] of Object.entries(banks)) {
+    summary += '📌 ' + bankName + ' (' + accounts.length + ' accounts)\n';
+    summary += '─'.repeat(35) + '\n';
+
+    for (const acc of accounts) {
+      const statusIcon = acc.status === 'Active' ? '✅' : '❌';
+      summary += statusIcon + ' ' + acc.code + ': ' + acc.name + '\n';
+      summary += '   💳 IBAN: ..' + acc.ibanLast4 + ' | ' + acc.currency + '\n';
+    }
+    summary += '\n';
+  }
+
+  summary += '═'.repeat(40) + '\n';
+  summary += 'Total: ' + data.filter(r => r[0]).length + ' accounts';
+
+  ui.alert(summary);
+}
+
 // ==================== END OF PART 4 ====================

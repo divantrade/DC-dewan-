@@ -61,12 +61,12 @@ function createAdvancesSheet(ss) {
   sheet.getRange(2, 10, lastRow, 1).setDataValidation(statusValidation);
 
   // Number formats
-  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 2, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 11, lastRow, 1).setNumberFormat('#,##0.00');
   sheet.getRange(2, 12, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('yyyy-mm-dd');
-  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(2, 13, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+  sheet.getRange(2, 15, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
 
   // Conditional formatting for Status
   const statusRange = sheet.getRange(2, 10, lastRow, 1);
@@ -144,9 +144,9 @@ function createAdvanceExpensesSheet(ss) {
   sheet.getRange(2, 9, lastRow, 1).setDataValidation(categoryValidation);
 
   // Number formats
-  sheet.getRange(2, 3, lastRow, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 3, lastRow, 1).setNumberFormat('dd.mm.yyyy');
   sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
-  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(2, 11, lastRow, 1).setNumberFormat('dd.mm.yyyy HH:mm');
 
   sheet.setFrozenRows(1);
 
@@ -300,21 +300,21 @@ function issueAdvance() {
   const transSheet = ss.getSheetByName('Transactions');
   if (transSheet) {
     const transRow = transSheet.getLastRow() + 1;
-    transSheet.getRange(transRow, 1).setValue(transRow - 1); // Transaction Code
-    transSheet.getRange(transRow, 2).setValue(advanceDate); // Date
-    transSheet.getRange(transRow, 3).setValue('Advance Issue (صرف عهدة)'); // Movement Type
-    transSheet.getRange(transRow, 4).setValue('Petty Cash Advance (عهدة مؤقتة)'); // Sub Type
-    transSheet.getRange(transRow, 5).setValue(selectedEmployee.code); // Party Code
-    transSheet.getRange(transRow, 6).setValue(selectedEmployee.nameEN); // Party Name
-    transSheet.getRange(transRow, 8).setValue(purpose); // Description
-    transSheet.getRange(transRow, 10).setValue('Employee (موظف)'); // Party Type
-    transSheet.getRange(transRow, 11).setValue(amount); // Amount
-    transSheet.getRange(transRow, 12).setValue(currency); // Currency
-    transSheet.getRange(transRow, 15).setValue(sourceType === 'Cash' ? 'Cash (نقدي)' : 'Bank Transfer (تحويل بنكي)'); // Payment Method
-    transSheet.getRange(transRow, 16).setValue(sourceName); // Cash/Bank
-    transSheet.getRange(transRow, 19).setValue('Paid (مدفوع)'); // Payment Status
-    transSheet.getRange(transRow, 22).setValue(advanceCode); // Reference
-    transSheet.getRange(transRow, 25).setValue('Yes (نعم)'); // Confirmed
+    transSheet.getRange(transRow, 1).setValue(transRow - 1); // Transaction Code (col A)
+    transSheet.getRange(transRow, 2).setValue(advanceDate); // Date (col B)
+    transSheet.getRange(transRow, 4).setValue('Advance Issue (صرف عهدة)'); // Movement Type (col D)
+    transSheet.getRange(transRow, 5).setValue('Petty Cash Advance (عهدة مؤقتة)'); // Category (col E)
+    transSheet.getRange(transRow, 6).setValue(selectedEmployee.code); // Client Code (col F)
+    transSheet.getRange(transRow, 7).setValue(selectedEmployee.nameEN); // Client Name (col G)
+    transSheet.getRange(transRow, 9).setValue(purpose); // Description (col I)
+    transSheet.getRange(transRow, 11).setValue('Employee (موظف)'); // Party Type (col K)
+    transSheet.getRange(transRow, 12).setValue(amount); // Amount (col L)
+    transSheet.getRange(transRow, 13).setValue(currency); // Currency (col M)
+    transSheet.getRange(transRow, 16).setValue(sourceType === 'Cash' ? 'Cash (نقدي)' : 'Bank Transfer (تحويل بنكي)'); // Payment Method (col P)
+    transSheet.getRange(transRow, 17).setValue(sourceName); // Cash/Bank (col Q)
+    transSheet.getRange(transRow, 20).setValue('Paid (مدفوع)'); // Payment Status (col T)
+    transSheet.getRange(transRow, 23).setValue(advanceCode); // Reference in Remaining col (col W)
+    transSheet.getRange(transRow, 26).setValue('Yes (نعم)'); // Show in Statement (col Z)
 
     // Apply color
     if (typeof applyPaymentMethodColor === 'function') {
@@ -566,18 +566,18 @@ function settleAdvance() {
       const transRow = transSheet.getLastRow() + 1;
       transSheet.getRange(transRow, 1).setValue(transRow - 1);
       transSheet.getRange(transRow, 2).setValue(exp.date);
-      transSheet.getRange(transRow, 3).setValue('Expense (مصروف)');
-      transSheet.getRange(transRow, 4).setValue(exp.category || 'Other Expense (مصروف آخر)');
-      transSheet.getRange(transRow, 5).setValue(updatedAdvance.employeeCode);
-      transSheet.getRange(transRow, 6).setValue(updatedAdvance.employeeName);
-      transSheet.getRange(transRow, 8).setValue(exp.description + ' (Advance: ' + updatedAdvance.code + ')');
-      transSheet.getRange(transRow, 10).setValue('Employee (موظف)');
-      transSheet.getRange(transRow, 11).setValue(exp.amount);
-      transSheet.getRange(transRow, 12).setValue(exp.currency);
-      transSheet.getRange(transRow, 15).setValue('Advance (عهدة)');
-      transSheet.getRange(transRow, 19).setValue('Paid (مدفوع)');
-      transSheet.getRange(transRow, 22).setValue(updatedAdvance.code);
-      transSheet.getRange(transRow, 25).setValue('Yes (نعم)');
+      transSheet.getRange(transRow, 4).setValue('Expense (مصروف)'); // Movement Type (col D)
+      transSheet.getRange(transRow, 5).setValue(exp.category || 'Other Expense (مصروف آخر)'); // Category (col E)
+      transSheet.getRange(transRow, 6).setValue(updatedAdvance.employeeCode); // Client Code (col F)
+      transSheet.getRange(transRow, 7).setValue(updatedAdvance.employeeName); // Client Name (col G)
+      transSheet.getRange(transRow, 9).setValue(exp.description + ' (Advance: ' + updatedAdvance.code + ')'); // Description (col I)
+      transSheet.getRange(transRow, 11).setValue('Employee (موظف)'); // Party Type (col K)
+      transSheet.getRange(transRow, 12).setValue(exp.amount); // Amount (col L)
+      transSheet.getRange(transRow, 13).setValue(exp.currency); // Currency (col M)
+      transSheet.getRange(transRow, 16).setValue('Advance (عهدة)'); // Payment Method (col P)
+      transSheet.getRange(transRow, 20).setValue('Paid (مدفوع)'); // Status (col T)
+      transSheet.getRange(transRow, 23).setValue(updatedAdvance.code); // Reference in Remaining col (col W)
+      transSheet.getRange(transRow, 26).setValue('Yes (نعم)'); // Show in Statement (col Z)
     });
   }
 
@@ -588,19 +588,19 @@ function settleAdvance() {
       const transRow = transSheet.getLastRow() + 1;
       transSheet.getRange(transRow, 1).setValue(transRow - 1);
       transSheet.getRange(transRow, 2).setValue(settlementDate);
-      transSheet.getRange(transRow, 3).setValue('Advance Return (رد عهدة)');
-      transSheet.getRange(transRow, 4).setValue('Advance Settlement (تسوية عهدة)');
-      transSheet.getRange(transRow, 5).setValue(updatedAdvance.employeeCode);
-      transSheet.getRange(transRow, 6).setValue(updatedAdvance.employeeName);
-      transSheet.getRange(transRow, 8).setValue('Return of advance ' + updatedAdvance.code);
-      transSheet.getRange(transRow, 10).setValue('Employee (موظف)');
-      transSheet.getRange(transRow, 11).setValue(updatedAdvance.remaining);
-      transSheet.getRange(transRow, 12).setValue(updatedAdvance.currency);
-      transSheet.getRange(transRow, 15).setValue(updatedAdvance.sourceType === 'Cash' ? 'Cash (نقدي)' : 'Bank Transfer (تحويل بنكي)');
-      transSheet.getRange(transRow, 16).setValue(updatedAdvance.sourceName);
-      transSheet.getRange(transRow, 19).setValue('Received (مستلم)');
-      transSheet.getRange(transRow, 22).setValue(updatedAdvance.code);
-      transSheet.getRange(transRow, 25).setValue('Yes (نعم)');
+      transSheet.getRange(transRow, 4).setValue('Advance Return (رد عهدة)'); // Movement Type (col D)
+      transSheet.getRange(transRow, 5).setValue('Advance Settlement (تسوية عهدة)'); // Category (col E)
+      transSheet.getRange(transRow, 6).setValue(updatedAdvance.employeeCode); // Client Code (col F)
+      transSheet.getRange(transRow, 7).setValue(updatedAdvance.employeeName); // Client Name (col G)
+      transSheet.getRange(transRow, 9).setValue('Return of advance ' + updatedAdvance.code); // Description (col I)
+      transSheet.getRange(transRow, 11).setValue('Employee (موظف)'); // Party Type (col K)
+      transSheet.getRange(transRow, 12).setValue(updatedAdvance.remaining); // Amount (col L)
+      transSheet.getRange(transRow, 13).setValue(updatedAdvance.currency); // Currency (col M)
+      transSheet.getRange(transRow, 16).setValue(updatedAdvance.sourceType === 'Cash' ? 'Cash (نقدي)' : 'Bank Transfer (تحويل بنكي)'); // Payment Method (col P)
+      transSheet.getRange(transRow, 17).setValue(updatedAdvance.sourceName); // Cash/Bank (col Q)
+      transSheet.getRange(transRow, 20).setValue('Received (مستلم)'); // Status (col T)
+      transSheet.getRange(transRow, 23).setValue(updatedAdvance.code); // Reference in Remaining col (col W)
+      transSheet.getRange(transRow, 26).setValue('Yes (نعم)'); // Show in Statement (col Z)
     }
 
     // Update Cash/Bank (deposit - IN)

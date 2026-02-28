@@ -34,7 +34,7 @@ function createEmailLogSheet(ss) {
   const widths = [150, 120, 90, 180, 200, 80, 80, 300, 80, 250];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   
-  sheet.getRange(2, 1, 500, 1).setNumberFormat('yyyy-mm-dd HH:mm:ss');
+  sheet.getRange(2, 1, 500, 1).setNumberFormat('dd.mm.yyyy HH:mm:ss');
   
   // Conditional formatting
   const statusRange = sheet.getRange(2, 7, 500, 1);
@@ -357,11 +357,12 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
         invoiceDate: logData[i][1],
         clientCode: logData[i][2],
         clientName: logData[i][3],
-        service: logData[i][4],
-        period: logData[i][5],
-        amount: logData[i][6],
-        currency: logData[i][7],
-        pdfLink: logData[i][9]
+        activity: logData[i][4],     // Activity column
+        service: logData[i][5],
+        period: logData[i][6],
+        amount: logData[i][7],
+        currency: logData[i][8],
+        pdfLink: logData[i][10]
       };
       break;
     }
@@ -412,18 +413,19 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
       }
     }
     
-    // Send email
+    // Send email with sector-specific sender name
+    const actProfile = getSectorProfile(invoiceData.activity || '');
     GmailApp.sendEmail(clientEmail, template.subject, '', {
       htmlBody: template.body,
-      name: getSettingValue('Company Name (EN)') || 'Dewan Consulting',
-      replyTo: 'sales@aldewan.net',
+      name: actProfile.companyNameEN,
+      replyTo: actProfile.email || 'sales@aldewan.net',
       attachments: attachments
     });
     
-    // Update Invoice Log
-    logSheet.getRange(invoiceRow, 9).setValue('Sent');
-    logSheet.getRange(invoiceRow, 12).setValue('Sent');
-    logSheet.getRange(invoiceRow, 13).setValue(new Date());
+    // Update Invoice Log (Status=J/10, Email Status=M/13, Email Sent Date=N/14)
+    logSheet.getRange(invoiceRow, 10).setValue('Sent');
+    logSheet.getRange(invoiceRow, 13).setValue('Sent');
+    logSheet.getRange(invoiceRow, 14).setValue(new Date());
     
     // Log to Email Log
     logEmail(invoiceData.invoiceNo, invoiceData.clientCode, invoiceData.clientName, 
@@ -436,8 +438,8 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
     logEmail(invoiceData.invoiceNo, invoiceData.clientCode, invoiceData.clientName,
              clientEmail, clientLanguage, 'Failed', e.message, sentBy, invoiceData.pdfLink);
     
-    // Update Invoice Log
-    logSheet.getRange(invoiceRow, 12).setValue('Failed');
+    // Update Invoice Log (Email Status=M/13)
+    logSheet.getRange(invoiceRow, 13).setValue('Failed');
     
     return { success: false, error: e.message };
   }
@@ -477,15 +479,15 @@ function sendPendingInvoices() {
   for (let i = 1; i < data.length; i++) {
     const invoiceNo = data[i][0];
     const invoiceDate = new Date(data[i][1]);
-    const sendEmail = data[i][10];
-    const emailStatus = data[i][11];
-    
+    const sendEmail = data[i][11];     // Send Email (column L)
+    const emailStatus = data[i][12];   // Email Status (column M)
+
     if (sendEmail !== 'Yes' || emailStatus === 'Sent') continue;
-    
+
     // Calculate send date (3 working days after invoice date)
     const sendDate = calculateSendDate(invoiceDate);
     sendDate.setHours(0, 0, 0, 0);
-    
+
     if (today >= sendDate) {
       readyToSend.push({
         row: i + 1,
@@ -786,42 +788,49 @@ function autoGenerateMonthlyInvoices() {
     return;
   }
   
-  // Generate all monthly invoices
+  // Generate all monthly invoices from Client Sector
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const clients = getActiveClients().filter(c => c.monthlyFee > 0);
-    
-    if (clients.length === 0) return;
-    
+    const monthlyActivities = getClientsWithMonthlyFees();
+
+    if (monthlyActivities.length === 0) return;
+
     const invoiceDate = new Date();
     const period = Utilities.formatDate(invoiceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
-    
-    clients.forEach(client => {
+
+    monthlyActivities.forEach(act => {
       const invoiceNo = getNextInvoiceNumber();
-      const clientData = getClientData(client.code);
-      
+      const clientData = getClientData(act.clientCode);
+
+      const serviceLabel = act.activity === 'Accounting'
+        ? 'Monthly Accounting (محاسبة شهرية)'
+        : act.activity === 'Consulting'
+          ? 'Monthly Consulting (استشارات شهرية)'
+          : 'Monthly ' + act.activity;
+
       // Fill template
       fillInvoiceTemplate(ss, {
         invoiceNo: invoiceNo,
         invoiceDate: invoiceDate,
-        clientName: client.nameEN,
+        clientName: act.clientName,
         clientNameAR: clientData ? clientData.nameAR : '',
         taxNumber: clientData ? clientData.taxNumber : '',
         address: clientData ? clientData.address : '',
         period: period,
         items: [{
-          description: 'Monthly Consulting (استشارات شهرية)',
+          item: act.activity,
+          description: serviceLabel,
           qty: 1,
-          unitPrice: client.monthlyFee,
-          total: client.monthlyFee
+          unitPrice: act.monthlyFee,
+          total: act.monthlyFee
         }],
-        currency: client.feeCurrency,
-        subtotal: client.monthlyFee,
+        currency: act.currency,
+        subtotal: act.monthlyFee,
         vat: 0,
         vatRate: 0,
-        total: client.monthlyFee
+        total: act.monthlyFee
       });
-      
+
       // Save PDF
       let pdfUrl = '';
       if (clientData && clientData.folderId) {
@@ -832,33 +841,33 @@ function autoGenerateMonthlyInvoices() {
           console.log('PDF error: ' + e.message);
         }
       }
-      
+
       // Log invoice
       logInvoice({
         invoiceNo: invoiceNo,
         invoiceDate: invoiceDate,
-        clientCode: client.code,
-        clientName: client.nameEN,
-        service: 'Monthly Consulting (استشارات شهرية)',
+        clientCode: act.clientCode,
+        clientName: act.clientName,
+        service: serviceLabel,
         period: period,
-        amount: client.monthlyFee,
-        currency: client.feeCurrency,
+        amount: act.monthlyFee,
+        currency: act.currency,
         status: 'Issued',
         pdfLink: pdfUrl,
         sendEmail: 'Yes',
         emailStatus: 'Pending',
         transCode: ''
       });
-      
+
       // Record transaction
-      recordInvoiceTransaction(invoiceNo, client.code, client.nameEN, client.monthlyFee, client.feeCurrency, 'Monthly Consulting (استشارات شهرية)');
-      
+      recordInvoiceTransaction(invoiceNo, act.clientCode, act.clientName, act.monthlyFee, act.currency, serviceLabel);
+
       incrementInvoiceNumber();
     });
-    
+
     // Log the action
-    logAlert('Auto Invoice', clients.length + ' monthly invoices generated for ' + period, 'Info');
-    
+    logAlert('Auto Invoice', monthlyActivities.length + ' monthly invoices generated for ' + period, 'Info');
+
   } catch (error) {
     console.error('Auto generate error: ' + error);
     logAlert('Auto Invoice Error', error.message, 'Error');
@@ -888,9 +897,9 @@ function autoSendPendingInvoices() {
     for (let i = 1; i < data.length; i++) {
       const invoiceNo = data[i][0];
       const invoiceDate = new Date(data[i][1]);
-      const sendEmail = data[i][10];
-      const emailStatus = data[i][11];
-      
+      const sendEmail = data[i][11];     // Send Email (column L)
+      const emailStatus = data[i][12];   // Email Status (column M)
+
       if (sendEmail !== 'Yes' || emailStatus === 'Sent') continue;
       
       // Check if 3 working days have passed
@@ -961,7 +970,7 @@ function logAlert(type, message, severity) {
   
   const lastRow = sheet.getLastRow() + 1;
   
-  sheet.getRange(lastRow, 1).setValue(new Date()).setNumberFormat('yyyy-mm-dd HH:mm');
+  sheet.getRange(lastRow, 1).setValue(new Date()).setNumberFormat('dd.mm.yyyy HH:mm');
   sheet.getRange(lastRow, 2).setValue(type);
   sheet.getRange(lastRow, 3).setValue(message);
   sheet.getRange(lastRow, 4).setValue(severity || 'Info');
@@ -999,12 +1008,12 @@ function checkOverduePayments() {
   const reminderDays = parseInt(getSettingValue('First Reminder (Days)')) || 30;
   
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][18]; // Status
-    const dueDate = data[i][19]; // Due Date
-    const amount = data[i][10]; // Amount
-    const clientName = data[i][5]; // Client Name
-    const invoiceNo = data[i][17]; // Invoice No
-    const currency = data[i][11]; // Currency
+    const status = data[i][19]; // Status (col T)
+    const dueDate = data[i][20]; // Due Date (col U)
+    const amount = data[i][11]; // Amount (col L)
+    const clientName = data[i][6]; // Client Name (col G)
+    const invoiceNo = data[i][18]; // Invoice No (col S)
+    const currency = data[i][12]; // Currency (col M)
     
     if (status && status.includes('Pending') && dueDate) {
       const due = new Date(dueDate);
