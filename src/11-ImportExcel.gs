@@ -933,31 +933,35 @@ function mapToCashBankValue(ss, inputValue) {
   const input = inputValue.toString().trim().toLowerCase();
 
   // Check Cash Boxes
+  // Columns: Cash Code(1), Cash Name(2), Currency(3), Responsible(4), Location(5), Opening Balance(6), Opening Date(7), Status(8)
   const cashSheet = ss.getSheetByName('Cash Boxes');
   if (cashSheet && cashSheet.getLastRow() > 1) {
     const data = cashSheet.getRange(2, 2, cashSheet.getLastRow() - 1, 7).getValues();
     for (const row of data) {
-      const name = (row[0] || '').toString().trim();
-      const currency = (row[1] || '').toString().trim();
-      const status = row[6];
+      const name = (row[0] || '').toString().trim();      // Cash Name (col 2)
+      const currency = (row[1] || '').toString().trim();   // Currency (col 3)
+      const status = (row[6] || '').toString().trim();     // Status (col 8)
 
-      if (name && status === 'Active' && name.toLowerCase().includes(input) || input.includes(name.toLowerCase())) {
+      if (name && status === 'Active' && (name.toLowerCase().includes(input) || input.includes(name.toLowerCase()))) {
         return '💰 ' + name + ' (' + currency + ')';
       }
     }
   }
 
   // Check Bank Accounts
+  // Columns: Account Code(1), Account Name(2), Bank Name(3), Currency(4), IBAN(5), SWIFT(6), Holder(7), Branch(8), Opening Balance(9), Opening Date(10), Status(11)
   const bankSheet = ss.getSheetByName('Bank Accounts');
   if (bankSheet && bankSheet.getLastRow() > 1) {
     const data = bankSheet.getRange(2, 2, bankSheet.getLastRow() - 1, 10).getValues();
     for (const row of data) {
-      const name = (row[0] || '').toString().trim();
-      const currency = (row[2] || '').toString().trim();
-      const status = row[9];
+      const name = (row[0] || '').toString().trim();       // Account Name (col 2)
+      const currency = (row[2] || '').toString().trim();   // Currency (col 4)
+      const iban = (row[3] || '').toString().trim();        // IBAN (col 5)
+      const status = (row[9] || '').toString().trim();     // Status (col 11)
 
       if (name && status === 'Active' && (name.toLowerCase().includes(input) || input.includes(name.toLowerCase()))) {
-        return '🏦 ' + name + ' (' + currency + ')';
+        const ibanSuffix = iban.length >= 4 ? ' [..' + iban.slice(-4) + ']' : '';
+        return '🏦 ' + name + ibanSuffix + ' (' + currency + ')';
       }
     }
   }
@@ -1060,31 +1064,6 @@ function clearOpeningBalancesSheet() {
   ui.alert('✅ تم مسح البيانات!');
 }
 
-// ==================== 8. REFRESH ALL DATA (after import) ====================
-/**
- * تحديث كل البيانات بعد الاستيراد
- */
-function refreshAllData() {
-  const ui = SpreadsheetApp.getUi();
-
-  try {
-    refreshSectorDropdown();
-    refreshClientDropdowns();
-    refreshItemsDropdown();
-    refreshCashBankDropdown();
-    refreshTransactionsValidation();
-
-    ui.alert(
-      '✅ All Data Refreshed!\n\n' +
-      '• Sector Dropdowns ✓\n' +
-      '• Client Dropdowns ✓\n' +
-      '• Items Dropdown ✓\n' +
-      '• Cash/Bank Dropdown ✓\n' +
-      '• Transaction Validations ✓'
-    );
-  } catch (e) {
-    ui.alert('⚠️ Partial refresh:\n\n' + e.message);
-  }
-}
+// Note: refreshAllData() is defined in 08-Reports.gs - no duplicate needed here
 
 // ==================== END OF PART 11 ====================
