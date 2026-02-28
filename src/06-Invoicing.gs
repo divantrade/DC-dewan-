@@ -304,38 +304,51 @@ function generateInvoiceFromTransaction() {
   const selectedData = [];
   let firstClientCode = null;
   let firstClientName = null;
+  let firstSector = null;
   let totalAmount = 0;
   let currency = 'TRY';
-  
+
   for (let i = 0; i < numRows; i++) {
     const row = startRow + i;
     const rowData = transSheet.getRange(row, 1, 1, 26).getValues()[0];
 
     const transCode = rowData[0];
     const transDate = rowData[1];
+    const rowSector = rowData[2] || '';  // Column C - Sector
     const clientCode = rowData[5];
     const clientName = rowData[6];
     const item = rowData[7];
     const description = rowData[8];
     const amount = rowData[11] || 0;
     const rowCurrency = rowData[12] || 'TRY';
-    
+
     if (!amount || amount === 0) continue;
-    
+
     if (firstClientCode === null) {
       firstClientCode = clientCode;
       firstClientName = clientName;
+      firstSector = rowSector;
       currency = rowCurrency;
     } else if (clientCode !== firstClientCode && clientName !== firstClientName) {
       ui.alert('⚠️ All selected rows must be for the SAME client!\n\nكل الصفوف المختارة يجب أن تكون لنفس العميل');
       return;
     }
-    
+
     if (rowCurrency !== currency) {
       ui.alert('⚠️ All selected rows must have the SAME currency!\n\nكل الصفوف يجب أن تكون بنفس العملة');
       return;
     }
-    
+
+    if (rowSector && firstSector && rowSector !== firstSector) {
+      ui.alert('⚠️ All selected rows must be for the SAME sector!\n\nكل الصفوف المختارة يجب أن تكون لنفس القطاع');
+      return;
+    }
+
+    // Use whichever row has a sector value
+    if (rowSector && !firstSector) {
+      firstSector = rowSector;
+    }
+
     selectedData.push({
       row: row,
       transCode: transCode,
@@ -344,25 +357,37 @@ function generateInvoiceFromTransaction() {
       description: description,
       amount: amount
     });
-    
+
     totalAmount += amount;
   }
-  
+
   if (selectedData.length === 0) {
     ui.alert('⚠️ No valid transactions selected!');
     return;
   }
-  
+
   const clientData = firstClientCode ? getClientData(firstClientCode) : null;
-  const clientActivity = firstClientCode ? getClientPrimaryActivity(firstClientCode) : '';
+
+  // Use sector from transaction Column C (extract EN name before parenthesis)
+  // Dropdown format: "Accounting (محاسبة)" → extract "Accounting"
+  let clientActivity = '';
+  if (firstSector) {
+    const parenIndex = firstSector.indexOf(' (');
+    clientActivity = parenIndex > 0 ? firstSector.substring(0, parenIndex) : firstSector;
+  } else {
+    // Fallback: get sector from Client Sector sheet
+    clientActivity = firstClientCode ? getClientPrimaryActivity(firstClientCode) : '';
+  }
 
   const itemsList = selectedData.map((d, i) =>
     (i + 1) + '. ' + (d.item || d.description || 'Item') + ': ' + formatCurrency(d.amount, currency)
   ).join('\n');
   
+  const sectorDisplay = clientActivity ? clientActivity : 'Default (افتراضي)';
   const confirm = ui.alert(
     '📄 Generate Invoice (إنشاء فاتورة)\n\n' +
     'Client: ' + (firstClientName || firstClientCode) + '\n' +
+    'Sector: ' + sectorDisplay + '\n' +
     'Items: ' + selectedData.length + '\n\n' +
     itemsList + '\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━\n' +
@@ -639,6 +664,9 @@ function generateCustomInvoice() {
     
     transSheet.getRange(lastRow, 1).setValue(lastRow - 1);
     transSheet.getRange(lastRow, 2).setValue(invoiceDate);
+    if (selectedActivity) {
+      transSheet.getRange(lastRow, 3).setValue(selectedActivity);  // Column C - Sector
+    }
     transSheet.getRange(lastRow, 4).setValue('Revenue Accrual (استحقاق إيراد)');
     transSheet.getRange(lastRow, 5).setValue('Service Revenue (إيرادات خدمات)');
     transSheet.getRange(lastRow, 6).setValue(clientCode);
@@ -793,8 +821,8 @@ function generateAllMonthlyInvoices() {
       transCode: ''
     });
 
-    // Record transaction
-    recordInvoiceTransaction(invoiceNo, act.clientCode, act.clientName, act.monthlyFee, act.currency, serviceLabel);
+    // Record transaction with sector
+    recordInvoiceTransaction(invoiceNo, act.clientCode, act.clientName, act.monthlyFee, act.currency, serviceLabel, act.activity);
 
     incrementInvoiceNumber();
     generated++;
@@ -1129,16 +1157,19 @@ function clearInvoiceTemplate() {
 }
 
 // ==================== 14. RECORD INVOICE AS TRANSACTION ====================
-function recordInvoiceTransaction(invoiceNo, clientCode, clientName, amount, currency, item) {
+function recordInvoiceTransaction(invoiceNo, clientCode, clientName, amount, currency, item, sectorName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const transSheet = ss.getSheetByName('Transactions');
-  
+
   if (!transSheet) return null;
-  
+
   const lastRow = transSheet.getLastRow() + 1;
-  
+
   transSheet.getRange(lastRow, 1).setValue(lastRow - 1);
   transSheet.getRange(lastRow, 2).setValue(new Date());
+  if (sectorName) {
+    transSheet.getRange(lastRow, 3).setValue(sectorName);  // Column C - Sector
+  }
   transSheet.getRange(lastRow, 4).setValue('Revenue Accrual (استحقاق إيراد)');
   transSheet.getRange(lastRow, 5).setValue('Service Revenue (إيرادات خدمات)');
   transSheet.getRange(lastRow, 6).setValue(clientCode);
@@ -1152,9 +1183,9 @@ function recordInvoiceTransaction(invoiceNo, clientCode, clientName, amount, cur
   transSheet.getRange(lastRow, 19).setValue(invoiceNo);
   transSheet.getRange(lastRow, 20).setValue('Pending (معلق)');
   transSheet.getRange(lastRow, 26).setValue('Yes (نعم)');
-  
+
   applyPaymentMethodColor(transSheet, lastRow, 'Accrual (استحقاق)');
-  
+
   return lastRow;
 }
 // ==================== 15. GET OR CREATE INVOICES FOLDER ====================

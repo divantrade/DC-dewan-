@@ -719,11 +719,19 @@ function getSectorProfile(sectorName) {
     return getDefaultProfile();
   }
 
+  // Handle bilingual dropdown format: "Accounting (محاسبة)" → "Accounting"
+  let cleanName = sectorName;
+  const parenIndex = sectorName.indexOf(' (');
+  if (parenIndex > 0) {
+    cleanName = sectorName.substring(0, parenIndex);
+  }
+
   const data = sheet.getDataRange().getValues();
 
   for (let i = 1; i < data.length; i++) {
     // Match by Sector Name EN (col B=1) or Sector Code (col A=0)
-    if ((data[i][1] === sectorName || data[i][0] === sectorName) && data[i][13] === 'Active') {
+    // Also match cleaned name from bilingual dropdown
+    if ((data[i][1] === sectorName || data[i][1] === cleanName || data[i][0] === sectorName || data[i][0] === cleanName) && data[i][13] === 'Active') {
       return {
         sector: data[i][1],
         sectorCode: data[i][0],
