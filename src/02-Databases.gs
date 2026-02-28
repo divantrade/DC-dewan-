@@ -547,7 +547,7 @@ function createClientActivitiesSheet(ss) {
   const headers = [
     'Client Code',       // A
     'Client Name',       // B
-    'Activity',          // C
+    'Sector',            // C
     'Fee Type',          // D - Monthly / Per-Job
     'Monthly Fee',       // E
     'Currency',          // F
@@ -574,11 +574,11 @@ function createClientActivitiesSheet(ss) {
     .build();
   sheet.getRange(2, 4, lastRow, 1).setDataValidation(feeTypeRule);
 
-  // Activity validation (column C)
-  const activityRule = SpreadsheetApp.newDataValidation()
+  // Sector validation (column C)
+  const sectorRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true)
     .build();
-  sheet.getRange(2, 3, lastRow, 1).setDataValidation(activityRule);
+  sheet.getRange(2, 3, lastRow, 1).setDataValidation(sectorRule);
 
   // Currency validation (column F)
   const currencyRule = SpreadsheetApp.newDataValidation()
@@ -642,13 +642,13 @@ function addClientActivity() {
   ss.setActiveSheet(sheet);
 
   ui.alert(
-    '📋 Add Client Activity (إضافة نشاط عميل)\n\n' +
+    '📋 Add Client Sector (إضافة قطاع عميل)\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Row: ' + lastRow + '\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
     'Required fields:\n' +
     '• Client Code\n' +
-    '• Activity (Accounting/Consulting/Logistics/...)\n' +
+    '• Sector (Accounting/Consulting/Logistics/...)\n' +
     '• Fee Type (Monthly/Per-Job)\n' +
     '• Monthly Fee (for Monthly type only)'
   );
