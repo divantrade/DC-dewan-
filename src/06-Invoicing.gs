@@ -167,8 +167,8 @@ function createInvoiceTemplateSheet(ss) {
   sheet.getRange('A' + (detailsStartRow + 1) + ':B' + (detailsStartRow + 1)).merge().setValue('Client:').setFontWeight('bold');
   sheet.getRange('C' + (detailsStartRow + 1) + ':F' + (detailsStartRow + 1)).merge(); // Value placeholder
 
-  // Row 3: Company Type
-  sheet.getRange('A' + (detailsStartRow + 2) + ':B' + (detailsStartRow + 2)).merge().setValue('Company Type:').setFontWeight('bold');
+  // Row 3: City / Country
+  sheet.getRange('A' + (detailsStartRow + 2) + ':B' + (detailsStartRow + 2)).merge().setValue('City / Country:').setFontWeight('bold');
   sheet.getRange('C' + (detailsStartRow + 2) + ':F' + (detailsStartRow + 2)).merge(); // Value placeholder
 
   // Row 4: Tax Number
@@ -391,7 +391,7 @@ function generateInvoiceFromTransaction() {
     activity: clientActivity,  // Sector profile for branding
     clientName: firstClientName || (clientData ? clientData.nameEN : ''),
     clientNameAR: clientData ? clientData.nameAR : '',
-    companyType: clientData ? clientData.companyType : '',
+    cityCountry: clientData ? ((clientData.city || '') + (clientData.city && clientData.country ? ', ' : '') + (clientData.country || '')) : '',
     taxNumber: clientData ? clientData.taxNumber : '',
     address: clientData ? clientData.address : '',
     period: period,
@@ -475,7 +475,7 @@ function generateCustomInvoice() {
   }
   
   // Get client activities for auto-detection
-  const clientActivities = getClientActivitiesList(clientCode);
+  const clientActivities = getClientSectorList(clientCode);
   let selectedActivity = '';
 
   if (clientActivities.length === 1) {
@@ -595,7 +595,7 @@ function generateCustomInvoice() {
     activity: selectedActivity,  // Sector profile for branding
     clientName: clientData.nameEN,
     clientNameAR: clientData.nameAR || '',
-    companyType: clientData.companyType || '',
+    cityCountry: ((clientData.city || '') + (clientData.city && clientData.country ? ', ' : '') + (clientData.country || '')),
     taxNumber: clientData.taxNumber || '',
     address: clientData.address || '',
     period: period,
@@ -700,11 +700,11 @@ function generateAllMonthlyInvoices() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
 
-  // Get clients with monthly fees from Client Activities sheet
+  // Get clients with monthly fees from Client Sector sheet
   const monthlyActivities = getClientsWithMonthlyFees();
 
   if (monthlyActivities.length === 0) {
-    ui.alert('⚠️ No clients with monthly fees found!\n\nAdd monthly fee activities in "Client Activities" sheet.');
+    ui.alert('⚠️ No clients with monthly fees found!\n\nAdd monthly fee activities in "Client Sector" sheet.');
     return;
   }
 
@@ -745,7 +745,7 @@ function generateAllMonthlyInvoices() {
       activity: act.activity,  // Sector profile for branding
       clientName: act.clientName,
       clientNameAR: clientData ? clientData.nameAR : '',
-      companyType: clientData ? clientData.companyType : '',
+      cityCountry: clientData ? ((clientData.city || '') + (clientData.city && clientData.country ? ', ' : '') + (clientData.country || '')) : '',
       taxNumber: clientData ? clientData.taxNumber : '',
       address: clientData ? clientData.address : '',
       period: period,
@@ -870,7 +870,7 @@ function fillInvoiceTemplate(ss, data) {
   sheet.getRange('C' + detailsStartRow).setValue(data.invoiceNo);
   sheet.getRange('F' + detailsStartRow).setValue(formatDate(data.invoiceDate, 'yyyy-MM-dd'));
   sheet.getRange('C' + (detailsStartRow + 1)).setValue(data.clientName + (data.clientNameAR ? ' / ' + data.clientNameAR : ''));
-  sheet.getRange('C' + (detailsStartRow + 2)).setValue(data.companyType || '');
+  sheet.getRange('C' + (detailsStartRow + 2)).setValue(data.cityCountry || '');
   sheet.getRange('C' + (detailsStartRow + 3)).setValue(data.taxNumber || '');
   sheet.getRange('C' + (detailsStartRow + 4)).setValue(data.address || '');
 

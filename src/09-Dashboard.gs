@@ -23,7 +23,7 @@ function setupSystemSecure() {
     '• Categories & Movement Types\n' +
     '• Items Database\n' +
     '• Sector Profiles (per-sector branding & dropdowns)\n' +
-    '• Clients, Client Activities, Vendors, Employees\n' +
+    '• Clients, Client Sector, Vendors, Employees\n' +
     '• Cash Boxes & Bank Accounts\n' +
     '• Transactions\n' +
     '• Invoice Template & Log\n' +
@@ -51,7 +51,7 @@ function setupSystemSecure() {
 
     // Part 3: Party sheets
     createClientsSheet(ss);
-    createClientActivitiesSheet(ss);
+    createClientSectorSheet(ss);
     createVendorsSheet(ss);
     createEmployeesSheet(ss);
     
@@ -145,7 +145,7 @@ This system manages:
 3 ways to create:
 1. From Transaction - select row, generate
 2. Custom Invoice - enter details manually
-3. All Monthly - batch from Client Activities sheet
+3. All Monthly - batch from Client Sector sheet
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

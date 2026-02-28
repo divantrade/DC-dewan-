@@ -788,7 +788,7 @@ function autoGenerateMonthlyInvoices() {
     return;
   }
   
-  // Generate all monthly invoices from Client Activities
+  // Generate all monthly invoices from Client Sector
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const monthlyActivities = getClientsWithMonthlyFees();

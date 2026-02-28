@@ -535,13 +535,13 @@ function getSectorsList() {
   return sectors;
 }
 
-// ==================== 6b. CLIENT ACTIVITIES SHEET ====================
-function createClientActivitiesSheet(ss) {
+// ==================== 6b. CLIENT SECTOR SHEET ====================
+function createClientSectorSheet(ss) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Client Activities');
+  let sheet = ss.getSheetByName('Client Sector');
   if (sheet) ss.deleteSheet(sheet);
 
-  sheet = ss.insertSheet('Client Activities');
+  sheet = ss.insertSheet('Client Sector');
   sheet.setTabColor('#00838f');
 
   const headers = [
@@ -620,13 +620,13 @@ function createClientActivitiesSheet(ss) {
   return sheet;
 }
 
-function addClientActivity() {
+function addClientSector() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  const sheet = ss.getSheetByName('Client Activities');
+  const sheet = ss.getSheetByName('Client Sector');
 
   if (!sheet) {
-    ui.alert('⚠️ Client Activities sheet not found!\n\nRun "Setup System" first.');
+    ui.alert('⚠️ Client Sector sheet not found!\n\nRun "Setup System" first.');
     return;
   }
 
@@ -660,9 +660,9 @@ function addClientActivity() {
  * @param {string} [feeType] - Filter by fee type ('Monthly' or 'Per-Job')
  * @returns {Array} - List of client activities
  */
-function getClientActivitiesList(clientCode, feeType) {
+function getClientSectorList(clientCode, feeType) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Client Activities');
+  const sheet = ss.getSheetByName('Client Sector');
   if (!sheet || sheet.getLastRow() < 2) return [];
 
   const data = sheet.getDataRange().getValues();
@@ -689,12 +689,12 @@ function getClientActivitiesList(clientCode, feeType) {
 }
 
 /**
- * Get clients with monthly fees (from Client Activities sheet)
+ * Get clients with monthly fees (from Client Sector sheet)
  * Used for monthly invoice generation
  * @returns {Array} - List of {clientCode, clientName, activity, monthlyFee, currency}
  */
 function getClientsWithMonthlyFees() {
-  return getClientActivitiesList(null, 'Monthly').filter(a => a.monthlyFee > 0);
+  return getClientSectorList(null, 'Monthly').filter(a => a.monthlyFee > 0);
 }
 
 // ==================== 7. SECTOR PROFILE FUNCTIONS ====================
@@ -775,12 +775,12 @@ function getDefaultProfile() {
 }
 
 /**
- * Get client's primary sector from Client Activities sheet
+ * Get client's primary sector from Client Sector sheet
  * @param {string} clientCode - Client code
  * @returns {string} - Sector name (e.g. 'Accounting') or empty string
  */
 function getClientPrimarySector(clientCode) {
-  const activities = getClientActivitiesList(clientCode);
+  const activities = getClientSectorList(clientCode);
   if (activities.length > 0) {
     return activities[0].activity;
   }

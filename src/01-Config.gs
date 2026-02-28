@@ -62,12 +62,10 @@ function onOpen() {
       .addSeparator()
       .addItem('🔢 Generate Missing Codes (توليد الأكواد)', 'generateMissingClientCodes')
       .addSeparator()
-      .addItem('📋 Add Client Activity (نشاط عميل)', 'addClientActivity')
+      .addItem('📋 Add Client Sector (قطاع عميل)', 'addClientSector')
       .addSeparator()
       .addItem('📄 Client Statement (كشف حساب)', 'showClientStatement')
-      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability')
-      .addSeparator()
-      .addItem('🏢 Add Company Type Column', 'addCompanyTypeColumn'))
+      .addItem('💹 Client Profitability (ربحية العميل)', 'showClientProfitability'))
     
     // Cash & Bank
     .addSubMenu(ui.createMenu('🏦 Cash & Bank (الخزائن والبنوك)')
@@ -271,7 +269,7 @@ function getSheetGroups() {
     },
     'databases': {
       name: '🗄️ Databases',
-      patterns: ['Clients', 'Client Activities', 'Vendors', 'Employees', 'Items Database', 'Sector Profiles', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
+      patterns: ['Clients', 'Client Sector', 'Vendors', 'Employees', 'Items Database', 'Sector Profiles', 'Movement Types', 'Categories', 'Holidays', 'Cash Boxes', 'Bank Accounts']
     },
     'settings': {
       name: '⚙️ Settings',

@@ -17,40 +17,34 @@ function createClientsSheet(ss) {
     'Company Name (EN)',     // B
     'Company Name (AR)',     // C
     'Company Name (TR)',     // D
-    'Company Type',          // E
-    'Tax Number',            // F
-    'Tax Office',            // G
+    'Contact Person',        // E
+    'Phone',                 // F
+    'Email',                 // G
     'Address',               // H
-    'Phone',                 // I
-    'Email',                 // J
-    'Contact Person',        // K
+    'City',                  // I
+    'Country',               // J
+    'Tax Number',            // K (optional)
     'Language',              // L
     'Folder ID',             // M
-    'Contract Start',        // N
+    'Registration Date',     // N
     'Status',                // O
     'Notes',                 // P
     'Created Date'           // Q
   ];
-  
+
   sheet.getRange(1, 1, 1, headers.length)
     .setValues([headers])
     .setBackground(COLORS.header)
     .setFontColor(COLORS.headerText)
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
-  
-  const widths = [100, 180, 150, 180, 120, 120, 120, 250, 120, 200, 150, 70, 280, 100, 80, 200, 100];
+
+  const widths = [100, 180, 150, 180, 150, 120, 200, 250, 120, 120, 120, 70, 280, 100, 80, 200, 100];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
   const lastRow = 500;
 
   // Data validations
-  // Company Type validation (column E)
-  const companyTypeValidation = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
-    .build();
-  sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
-
   // Language validation (column L = 12)
   const languageValidation = SpreadsheetApp.newDataValidation()
     .requireValueInList(['EN', 'AR', 'TR'], true)
@@ -64,7 +58,7 @@ function createClientsSheet(ss) {
   sheet.getRange(2, 15, lastRow, 1).setDataValidation(statusValidation);
 
   // Number formats
-  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('dd.mm.yyyy'); // Contract Start
+  sheet.getRange(2, 14, lastRow, 1).setNumberFormat('dd.mm.yyyy'); // Registration Date
   sheet.getRange(2, 17, lastRow, 1).setNumberFormat('dd.mm.yyyy'); // Created Date
 
   // Conditional formatting for Status (column O = 15)
@@ -77,12 +71,13 @@ function createClientsSheet(ss) {
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo('Suspended').setBackground(COLORS.danger).setRanges([statusRange]).build()
   ]);
-  
+
   sheet.setFrozenRows(1);
   sheet.setFrozenColumns(2);
-  
+
   // Add notes
   sheet.getRange('A1').setNote('Client Code: Auto-generated (CLT-001, CLT-002, ...)');
+  sheet.getRange('K1').setNote('Tax Number: Optional - not all clients require it');
   sheet.getRange('M1').setNote('Folder ID: Google Drive folder for invoices');
   
   return sheet;
@@ -100,11 +95,11 @@ function addNewClient() {
   
   const lastRow = sheet.getLastRow() + 1;
   const newCode = generateNextCode('CLT', sheet, 1);
-  
+
   // Set defaults
   sheet.getRange(lastRow, 1).setValue(newCode);
-  sheet.getRange(lastRow, 5).setValue('Limited'); // Company Type
   sheet.getRange(lastRow, 12).setValue('AR'); // Language
+  sheet.getRange(lastRow, 14).setValue(new Date()); // Registration Date
   sheet.getRange(lastRow, 15).setValue('Active'); // Status
   sheet.getRange(lastRow, 17).setValue(new Date()); // Created Date
 
@@ -119,10 +114,11 @@ function addNewClient() {
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
     'Required fields (الحقول المطلوبة):\n' +
     '• Company Name (EN/AR/TR)\n' +
-    '• Tax Number\n' +
+    '• Contact Person\n' +
     '• Email\n' +
+    '• City & Country\n' +
     '• Folder ID (for invoices)\n\n' +
-    'Then add activities in "Client Activities" sheet'
+    'Then add sectors in "Client Sector" sheet'
   );
 }
 
@@ -195,16 +191,16 @@ function getClientData(clientCode) {
         nameEN: data[i][cols['Company Name (EN)']] || '',
         nameAR: data[i][cols['Company Name (AR)']] || '',
         nameTR: data[i][cols['Company Name (TR)']] || '',
-        companyType: data[i][cols['Company Type']] || '',
-        taxNumber: data[i][cols['Tax Number']] || '',
-        taxOffice: data[i][cols['Tax Office']] || '',
-        address: data[i][cols['Address']] || '',
+        contactPerson: data[i][cols['Contact Person']] || '',
         phone: data[i][cols['Phone']] || '',
         email: data[i][cols['Email']] || '',
-        contactPerson: data[i][cols['Contact Person']] || '',
+        address: data[i][cols['Address']] || '',
+        city: data[i][cols['City']] || '',
+        country: data[i][cols['Country']] || '',
+        taxNumber: data[i][cols['Tax Number']] || '',
         language: data[i][cols['Language']] || 'AR',
         folderId: data[i][cols['Folder ID']] || '',
-        contractStart: data[i][cols['Contract Start']] || '',
+        registrationDate: data[i][cols['Registration Date']] || '',
         status: data[i][cols['Status']] || 'Active',
         notes: data[i][cols['Notes']] || ''
       };
@@ -548,76 +544,6 @@ function getPartyListByType(partyType) {
 }
 
 // ==================== CLIENT UTILITIES ====================
-
-/**
- * إضافة عامود Company Type للشيت الموجود بدون حذف البيانات
- */
-function addCompanyTypeColumn() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ui = SpreadsheetApp.getUi();
-  const sheet = ss.getSheetByName('Clients');
-
-  if (!sheet) {
-    ui.alert('❌ Clients sheet not found!');
-    return;
-  }
-
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-  // Check if Company Type column already exists
-  if (headers.includes('Company Type')) {
-    // Update the validation with new options
-    const companyTypeCol = headers.indexOf('Company Type') + 1;
-    const lastRow = Math.max(sheet.getLastRow(), 500);
-    const companyTypeValidation = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
-      .build();
-    sheet.getRange(2, companyTypeCol, lastRow, 1).setDataValidation(companyTypeValidation);
-
-    ui.alert('✅ Company Type validation updated!\n\nOptions: Limited, Şahıs, Anonim, Mükellef');
-    return;
-  }
-
-  // Find where to insert (after Company Name (TR) - column D)
-  const insertAfterCol = 4; // Column D
-
-  // Insert new column at position 5 (E)
-  sheet.insertColumnAfter(insertAfterCol);
-
-  // Set header
-  sheet.getRange(1, 5).setValue('Company Type')
-    .setBackground(COLORS.header)
-    .setFontColor(COLORS.headerText)
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center');
-
-  // Set column width
-  sheet.setColumnWidth(5, 150);
-
-  // Add validation
-  const lastRow = Math.max(sheet.getLastRow(), 500);
-  const companyTypeValidation = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Limited', 'Şahıs', 'Anonim', 'Mükellef'], true)
-    .build();
-  sheet.getRange(2, 5, lastRow, 1).setDataValidation(companyTypeValidation);
-
-  // Set default value for existing clients
-  const existingRows = sheet.getLastRow() - 1;
-  if (existingRows > 0) {
-    for (let i = 2; i <= sheet.getLastRow(); i++) {
-      if (sheet.getRange(i, 2).getValue()) { // If has company name
-        sheet.getRange(i, 5).setValue('Limited');
-      }
-    }
-  }
-
-  ui.alert(
-    '✅ Company Type column added!\n\n' +
-    'Şirket Türü sütunu eklendi\n\n' +
-    'Options: Limited, Şahıs, Anonim, Mükellef\n' +
-    'Default: Limited'
-  );
-}
 
 /**
  * توليد أكواد تلقائية للعملاء الذين ليس لديهم كود
