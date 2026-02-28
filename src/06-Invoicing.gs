@@ -117,8 +117,8 @@ function createInvoiceTemplateSheet(ss) {
   // Row 1: Logo (centered) - if provided
   if (logoUrl) {
     sheet.getRange('A1:F1').merge();
-    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 4, 90, 220)');
-    sheet.setRowHeight(1, 100);
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+    sheet.setRowHeight(1, 90);
     sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
     currentRow = 2;
   }
@@ -262,7 +262,7 @@ function updateInvoiceLogo() {
   // Add logo
   sheet.getRange('A1:F1').merge();
   sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
-  sheet.setRowHeight(1, 70);
+  sheet.setRowHeight(1, 90);
   sheet.getRange('A1').setHorizontalAlignment('center').setVerticalAlignment('middle');
 
   ui.alert('✅ Logo added successfully!\n\nتم إضافة اللوجو بنجاح!');
@@ -860,10 +860,10 @@ function fillInvoiceTemplate(ss, data) {
   let logoUrl = resolveLogoUrl(profile.logoUrl);
   const hasLogo = logoUrl !== '';
 
-  // Row 1: Logo
+  // Row 1: Logo (mode 1 = fit to cell, maintains aspect ratio)
   if (hasLogo) {
-    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 4, 90, 220)');
-    sheet.setRowHeight(1, 100);
+    sheet.getRange('A1').setFormula('=IMAGE("' + logoUrl + '", 1)');
+    sheet.setRowHeight(1, 90);
   } else {
     sheet.getRange('A1').clearContent();
     sheet.setRowHeight(1, 20);
