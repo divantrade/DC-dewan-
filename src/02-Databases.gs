@@ -538,6 +538,11 @@ function getSectorsList() {
 // ==================== 6b. CLIENT SECTOR SHEET ====================
 function createClientSectorSheet(ss) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+
+  // Delete old "Client Activities" sheet if it exists (renamed to "Client Sector")
+  const oldSheet = ss.getSheetByName('Client Activities');
+  if (oldSheet) ss.deleteSheet(oldSheet);
+
   let sheet = ss.getSheetByName('Client Sector');
   if (sheet) ss.deleteSheet(sheet);
 
