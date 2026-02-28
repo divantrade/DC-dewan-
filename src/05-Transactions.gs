@@ -346,17 +346,19 @@ function refreshCashBankDropdown() {
     });
   }
   
-  // Bank Accounts
+  // Bank Accounts - show IBAN last 4 for disambiguation
   const bankSheet = ss.getSheetByName('Bank Accounts');
   if (bankSheet && bankSheet.getLastRow() > 1) {
     const bankData = bankSheet.getRange(2, 2, bankSheet.getLastRow() - 1, 10).getValues();
     bankData.forEach(row => {
       const name = row[0];     // B = Name
       const currency = row[2]; // D = Currency
+      const iban = (row[3] || '').toString().trim(); // E = IBAN
       const status = row[9];   // K = Status
-      
+
       if (name && status === 'Active') {
-        cashBankList.push('🏦 ' + name + ' (' + currency + ')');
+        const ibanSuffix = iban.length >= 4 ? ' [..' + iban.slice(-4) + ']' : '';
+        cashBankList.push('🏦 ' + name + ibanSuffix + ' (' + currency + ')');
       }
     });
   }

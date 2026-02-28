@@ -956,10 +956,12 @@ function mapToCashBankValue(ss, inputValue) {
     for (const row of data) {
       const name = (row[0] || '').toString().trim();       // Account Name (col 2)
       const currency = (row[2] || '').toString().trim();   // Currency (col 4)
+      const iban = (row[3] || '').toString().trim();        // IBAN (col 5)
       const status = (row[9] || '').toString().trim();     // Status (col 11)
 
       if (name && status === 'Active' && (name.toLowerCase().includes(input) || input.includes(name.toLowerCase()))) {
-        return '🏦 ' + name + ' (' + currency + ')';
+        const ibanSuffix = iban.length >= 4 ? ' [..' + iban.slice(-4) + ']' : '';
+        return '🏦 ' + name + ibanSuffix + ' (' + currency + ')';
       }
     }
   }
