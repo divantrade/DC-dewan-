@@ -1,7 +1,7 @@
 // ╔════════════════════════════════════════════════════════════════════════════╗
 // ║                    DC CONSULTING ACCOUNTING SYSTEM v3.1                     ║
 // ║                              Part 6 of 9                                    ║
-// ║              Invoice System (with Activity Profiles support)                ║
+// ║              Invoice System (with Sector Profiles support)                 ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 // ==================== 1. CREATE INVOICE LOG SHEET ====================
@@ -17,7 +17,7 @@ function createInvoiceLogSheet(ss) {
     'Invoice Date',      // B
     'Client Code',       // C
     'Client Name',       // D
-    'Activity',          // E - Accounting/Consulting/etc.
+    'Sector',            // E - Accounting/Consulting/etc.
     'Service',           // F
     'Period',            // G
     'Amount',            // H
@@ -43,10 +43,10 @@ function createInvoiceLogSheet(ss) {
   
   const lastRow = 500;
   
-  // Activity validation (column E)
-  const activityRule = SpreadsheetApp.newDataValidation()
+  // Sector validation (column E)
+  const sectorRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true).build();
-  sheet.getRange(2, 5, lastRow, 1).setDataValidation(activityRule);
+  sheet.getRange(2, 5, lastRow, 1).setDataValidation(sectorRule);
 
   // Status validation (column J)
   const statusRule = SpreadsheetApp.newDataValidation()
@@ -388,7 +388,7 @@ function generateInvoiceFromTransaction() {
   fillInvoiceTemplate(ss, {
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
-    activity: clientActivity,  // Activity profile for branding
+    activity: clientActivity,  // Sector profile for branding
     clientName: firstClientName || (clientData ? clientData.nameEN : ''),
     clientNameAR: clientData ? clientData.nameAR : '',
     companyType: clientData ? clientData.companyType : '',
@@ -408,7 +408,7 @@ function generateInvoiceFromTransaction() {
     invoiceDate: invoiceDate,
     clientCode: firstClientCode,
     clientName: firstClientName,
-    activity: clientActivity,  // Track activity in log
+    activity: clientActivity,  // Track sector in log
     service: selectedData.length > 1 ? 'Multiple Items (' + selectedData.length + ')' : (selectedData[0].item || ''),
     period: period,
     amount: totalAmount,
@@ -483,16 +483,16 @@ function generateCustomInvoice() {
   } else if (clientActivities.length > 1) {
     const actList = clientActivities.map(a => a.activity).join(', ');
     const actResponse = ui.prompt(
-      '📄 Custom Invoice - Select Activity\n\n' +
-      'Client has multiple activities: ' + actList,
-      'Enter activity name (اختر النشاط):\n\n' + actList,
+      '📄 Custom Invoice - Select Sector\n\n' +
+      'Client has multiple sectors: ' + actList,
+      'Enter sector name (اختر القطاع):\n\n' + actList,
       ui.ButtonSet.OK_CANCEL
     );
     if (actResponse.getSelectedButton() !== ui.Button.OK) return;
     selectedActivity = actResponse.getResponseText().trim();
   }
 
-  const activityProfile = getActivityProfile(selectedActivity);
+  const activityProfile = getSectorProfile(selectedActivity);
 
   const clientConfirm = ui.alert(
     '✅ Client Found (تم العثور على العميل)\n\n' +
@@ -500,7 +500,7 @@ function generateCustomInvoice() {
     'Name (EN): ' + clientData.nameEN + '\n' +
     'Name (AR): ' + (clientData.nameAR || '-') + '\n' +
     'Tax Number: ' + (clientData.taxNumber || '-') + '\n' +
-    (selectedActivity ? 'Activity: ' + selectedActivity + ' (' + activityProfile.companyNameEN + ')' : '') + '\n\n' +
+    (selectedActivity ? 'Sector: ' + selectedActivity + ' (' + activityProfile.companyNameEN + ')' : '') + '\n\n' +
     'Continue with this client?',
     ui.ButtonSet.YES_NO
   );
@@ -592,7 +592,7 @@ function generateCustomInvoice() {
   fillInvoiceTemplate(ss, {
     invoiceNo: invoiceNo,
     invoiceDate: invoiceDate,
-    activity: selectedActivity,  // Activity profile for branding
+    activity: selectedActivity,  // Sector profile for branding
     clientName: clientData.nameEN,
     clientNameAR: clientData.nameAR || '',
     companyType: clientData.companyType || '',
@@ -618,7 +618,7 @@ function generateCustomInvoice() {
     invoiceDate: invoiceDate,
     clientCode: clientCode,
     clientName: clientData.nameEN,
-    activity: selectedActivity,  // Track activity in log
+    activity: selectedActivity,  // Track sector in log
     service: description,
     period: period,
     amount: totalAmount,
@@ -714,7 +714,7 @@ function generateAllMonthlyInvoices() {
 
   const confirm = ui.alert(
     '📋 Generate All Monthly Invoices\n\n' +
-    'This will create invoices for ' + monthlyActivities.length + ' activity subscriptions:\n\n' +
+    'This will create invoices for ' + monthlyActivities.length + ' sector subscriptions:\n\n' +
     clientsList + '\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -738,11 +738,11 @@ function generateAllMonthlyInvoices() {
         ? 'Monthly Consulting (استشارات شهرية)'
         : 'Monthly ' + act.activity;
 
-    // Fill template with activity-specific branding
+    // Fill template with sector-specific branding
     fillInvoiceTemplate(ss, {
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
-      activity: act.activity,  // Activity profile for branding
+      activity: act.activity,  // Sector profile for branding
       clientName: act.clientName,
       clientNameAR: clientData ? clientData.nameAR : '',
       companyType: clientData ? clientData.companyType : '',
@@ -775,13 +775,13 @@ function generateAllMonthlyInvoices() {
       }
     }
 
-    // Log invoice with activity
+    // Log invoice with sector
     logInvoice({
       invoiceNo: invoiceNo,
       invoiceDate: invoiceDate,
       clientCode: act.clientCode,
       clientName: act.clientName,
-      activity: act.activity,  // Track activity in log
+      activity: act.activity,  // Track sector in log
       service: serviceLabel,
       period: period,
       amount: act.monthlyFee,
@@ -814,10 +814,10 @@ function generateAllMonthlyInvoices() {
 
 // ==================== 7. FILL INVOICE TEMPLATE ====================
 /**
- * Fill invoice template with data and activity-specific branding
+ * Fill invoice template with data and sector-specific branding
  * @param {Spreadsheet} ss
  * @param {object} data - Invoice data including items, amounts, client info
- * data.activity - Activity name (e.g. 'Accounting') for per-activity branding
+ * data.activity - Sector name (e.g. 'Accounting') for per-sector branding
  */
 function fillInvoiceTemplate(ss, data) {
   let sheet = ss.getSheetByName('Invoice Template');
@@ -825,8 +825,8 @@ function fillInvoiceTemplate(ss, data) {
     sheet = createInvoiceTemplateSheet(ss);
   }
 
-  // Get activity profile for branding (falls back to Settings if no activity)
-  const profile = getActivityProfile(data.activity || '');
+  // Get sector profile for branding (falls back to Settings if no sector)
+  const profile = getSectorProfile(data.activity || '');
 
   // === Update branding: Logo, Company Name, Bank Details ===
   let logoUrl = resolveLogoUrl(profile.logoUrl);
@@ -896,7 +896,7 @@ function fillInvoiceTemplate(ss, data) {
   sheet.getRange('F' + (totalsStartRow + 1)).setValue(data.vat || 0).setNumberFormat('#,##0.00');
   sheet.getRange('F' + (totalsStartRow + 2)).setValue(data.total).setNumberFormat('#,##0.00 "' + currencySymbol + '"');
 
-  // === Update Bank Details with activity profile ===
+  // === Update Bank Details with sector profile ===
   const bankRow = totalsStartRow + 4;
   sheet.getRange('C' + (bankRow + 1)).setValue(profile.bankName);
   sheet.getRange('C' + (bankRow + 2)).setValue(profile.ibanTRY);
@@ -951,7 +951,7 @@ function logInvoice(data) {
   sheet.getRange(lastRow, 2).setValue(data.invoiceDate);
   sheet.getRange(lastRow, 3).setValue(data.clientCode);
   sheet.getRange(lastRow, 4).setValue(data.clientName);
-  sheet.getRange(lastRow, 5).setValue(data.activity || '');       // Activity
+  sheet.getRange(lastRow, 5).setValue(data.activity || '');       // Sector
   sheet.getRange(lastRow, 6).setValue(data.service);
   sheet.getRange(lastRow, 7).setValue(data.period);
   sheet.getRange(lastRow, 8).setValue(data.amount);

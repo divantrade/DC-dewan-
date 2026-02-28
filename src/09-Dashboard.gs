@@ -21,8 +21,8 @@ function setupSystemSecure() {
     'This will create all required sheets:\n\n' +
     '• Settings & Holidays\n' +
     '• Categories & Movement Types\n' +
-    '• Items Database & Activities\n' +
-    '• Activity Profiles (per-activity branding)\n' +
+    '• Items Database\n' +
+    '• Sector Profiles (per-sector branding & dropdowns)\n' +
     '• Clients, Client Activities, Vendors, Employees\n' +
     '• Cash Boxes & Bank Accounts\n' +
     '• Transactions\n' +
@@ -47,8 +47,7 @@ function setupSystemSecure() {
     createCategoriesSheet(ss);
     createMovementTypesSheet(ss);
     createItemsDatabase(ss);
-    createActivitiesSheet(ss);
-    createActivityProfilesSheet(ss);
+    createSectorProfilesSheet(ss);
 
     // Part 3: Party sheets
     createClientsSheet(ss);
@@ -214,7 +213,7 @@ function validateSystem() {
   const ui = SpreadsheetApp.getUi();
   
   const requiredSheets = [
-    'Settings', 'Holidays', 'Categories', 'Movement Types', 'Items Database', 'Activities',
+    'Settings', 'Holidays', 'Categories', 'Movement Types', 'Items Database', 'Sector Profiles',
     'Clients', 'Vendors', 'Employees',
     'Cash Boxes', 'Bank Accounts',
     'Transactions', 'Invoice Log', 'Invoice Template',

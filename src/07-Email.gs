@@ -413,8 +413,8 @@ function sendInvoiceEmail(invoiceNo, sentBy) {
       }
     }
     
-    // Send email with activity-specific sender name
-    const actProfile = getActivityProfile(invoiceData.activity || '');
+    // Send email with sector-specific sender name
+    const actProfile = getSectorProfile(invoiceData.activity || '');
     GmailApp.sendEmail(clientEmail, template.subject, '', {
       htmlBody: template.body,
       name: actProfile.companyNameEN,
