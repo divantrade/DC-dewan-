@@ -1066,4 +1066,617 @@ function clearOpeningBalancesSheet() {
 
 // Note: refreshAllData() is defined in 08-Reports.gs - no duplicate needed here
 
+// ==================== 8. LEGACY ACCOUNTS MIGRATION ====================
+/**
+ * ترحيل الحسابات من نظام قديم - شيت بسيط بصيغة مبسطة
+ * يقوم بـ:
+ * 1. إدخال الأرصدة الختامية 2025 كأرصدة افتتاحية 2026
+ * 2. إدخال متحصلات وأجرة يناير وفبراير كمعاملات
+ */
+function createLegacyMigrationSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  let sheet = ss.getSheetByName('Legacy Migration');
+  if (sheet) {
+    const confirm = ui.alert(
+      '⚠️ شيت Legacy Migration موجود بالفعل\n\n' +
+      'هل تريد إعادة إنشائه؟ (البيانات الحالية ستُحذف)',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) return;
+    ss.deleteSheet(sheet);
+  }
+
+  sheet = ss.insertSheet('Legacy Migration');
+  sheet.setTabColor('#9c27b0');
+
+  // === Headers (11 columns) ===
+  const headers = [
+    '#\nم',                                        // A (1)
+    'Company Name\nاسم الشركة',                    // B (2)
+    'Sector\nالقطاع',                              // C (3)
+    'Currency\nالعملة',                            // D (4)
+    'Closing Balance 2025\nالرصيد الختامي 2025',   // E (5)
+    'Jan Collections\nمتحصلات يناير',              // F (6)
+    'Jan Rent\nأجرة يناير',                        // G (7)
+    'Feb Collections\nمتحصلات فبراير',             // H (8)
+    'Feb Rent\nأجرة فبراير',                       // I (9)
+    'Payment Method\nطريقة الدفع',                 // J (10)
+    'Notes\nملاحظات'                               // K (11)
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground('#9c27b0')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setWrap(true);
+
+  sheet.setRowHeight(1, 60);
+
+  // === Instructions row (row 2) ===
+  const instructions = [
+    'رقم تسلسلي',
+    'اسم الشركة كما في\nالنظام القديم',
+    'مثال:\nAccounting (محاسبة)',
+    'TRY/USD/EUR...',
+    'رصيد نهاية 2025\n(يصبح رصيد افتتاحي 2026)',
+    'إجمالي متحصلات\nيناير 2026',
+    'إجمالي أجرة\nيناير 2026',
+    'إجمالي متحصلات\nفبراير 2026',
+    'إجمالي أجرة\nفبراير 2026',
+    'Cash / Bank Transfer',
+    'ملاحظات إضافية'
+  ];
+
+  sheet.getRange(2, 1, 1, instructions.length)
+    .setValues([instructions])
+    .setBackground('#f3e5f5')
+    .setFontColor('#6a1b9a')
+    .setFontSize(8)
+    .setFontStyle('italic')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setWrap(true);
+
+  sheet.setRowHeight(2, 65);
+
+  // Column widths
+  const widths = [40, 200, 160, 80, 140, 140, 140, 140, 140, 150, 200];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  const dataRows = 200;
+
+  // # column (auto serial)
+  sheet.getRange(3, 1, dataRows, 1).setNumberFormat('0');
+
+  // Amount formats
+  sheet.getRange(3, 5, dataRows, 5).setNumberFormat('#,##0.00');
+
+  // Currency dropdown
+  const currRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CURRENCIES, true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(3, 4, dataRows, 1).setDataValidation(currRule);
+
+  // Payment Method dropdown
+  const payRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Cash', 'Bank Transfer'], true)
+    .setAllowInvalid(true).build();
+  sheet.getRange(3, 10, dataRows, 1).setDataValidation(payRule);
+
+  // === Status area ===
+  sheet.getRange(1, 13).setValue('MIGRATION STATUS').setFontWeight('bold').setBackground('#9c27b0').setFontColor('#ffffff');
+  sheet.getRange(2, 13).setValue('Ready').setBackground('#c8e6c9').setFontWeight('bold');
+  sheet.getRange(3, 13).setValue('Companies:').setFontWeight('bold');
+  sheet.getRange(3, 14).setValue(0);
+  sheet.getRange(4, 13).setValue('Transactions:').setFontWeight('bold');
+  sheet.getRange(4, 14).setValue(0);
+
+  sheet.setColumnWidth(13, 120);
+  sheet.setColumnWidth(14, 80);
+
+  sheet.setFrozenRows(2);
+
+  // Add sample data (row 3)
+  sheet.getRange(3, 1, 1, 11).setValues([[
+    1, 'Example Company (مثال)', '', 'TRY', 15000, 5000, 3000, 6000, 3000, 'Bank Transfer', 'مثال - احذف هذا السطر'
+  ]]);
+  sheet.getRange(3, 1, 1, 11).setBackground('#fff9c4').setFontStyle('italic');
+
+  ss.setActiveSheet(sheet);
+  sheet.setActiveRange(sheet.getRange('A3'));
+
+  // Instructions note
+  sheet.getRange('A1').setNote(
+    '📋 ترحيل الحسابات من النظام القديم:\n\n' +
+    '1. الصق بيانات الشركات من السطر 3\n' +
+    '2. تأكد من ملء: اسم الشركة، العملة، والمبالغ\n' +
+    '3. من القائمة:\n' +
+    '   DC Consulting → 📥 Import → Migrate Legacy Accounts\n\n' +
+    '📌 النظام سيقوم بـ:\n' +
+    '• إنشاء أرصدة افتتاحية بتاريخ 01.01.2026\n' +
+    '• إدخال متحصلات يناير كـ Revenue Collection\n' +
+    '• إدخال أجرة يناير كـ Expense Payment\n' +
+    '• إدخال متحصلات فبراير كـ Revenue Collection\n' +
+    '• إدخال أجرة فبراير كـ Expense Payment\n\n' +
+    '⚠️ تأكد من وجود الشركات كعملاء في شيت Clients أولاً\n' +
+    '   أو سيتم إضافتها تلقائياً'
+  );
+
+  ui.alert(
+    '✅ Legacy Migration Sheet Created!\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '📋 فورمات البيانات المطلوبة:\n\n' +
+    'A = م (رقم تسلسلي)\n' +
+    'B = اسم الشركة\n' +
+    'C = القطاع (اختياري)\n' +
+    'D = العملة (TRY/USD/EUR...)\n' +
+    'E = الرصيد الختامي 2025\n' +
+    'F = متحصلات يناير\n' +
+    'G = أجرة يناير\n' +
+    'H = متحصلات فبراير\n' +
+    'I = أجرة فبراير\n' +
+    'J = طريقة الدفع (Cash/Bank Transfer)\n' +
+    'K = ملاحظات\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'الخطوات:\n' +
+    '1. الصق البيانات من السطر 3\n' +
+    '2. DC Consulting → 📥 Import → Migrate Legacy Accounts'
+  );
+
+  return sheet;
+}
+
+// ==================== 9. IMPORT LEGACY ACCOUNTS ====================
+/**
+ * استيراد الحسابات القديمة - يقوم بالعمليات التالية:
+ * 1. التحقق من البيانات
+ * 2. إنشاء عملاء جدد إذا لزم الأمر
+ * 3. إدخال الأرصدة الافتتاحية (الرصيد الختامي 2025 → رصيد افتتاحي 2026)
+ * 4. إدخال معاملات يناير (متحصلات + أجرة)
+ * 5. إدخال معاملات فبراير (متحصلات + أجرة)
+ */
+function importLegacyAccounts() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  const migrationSheet = ss.getSheetByName('Legacy Migration');
+  if (!migrationSheet) {
+    ui.alert('❌ شيت Legacy Migration غير موجود!\n\nاستخدم: DC Consulting → 📥 Import → Create Legacy Migration Sheet');
+    return;
+  }
+
+  const transSheet = ss.getSheetByName('Transactions');
+  if (!transSheet) {
+    ui.alert('❌ شيت Transactions غير موجود!\n\nقم بإعداد النظام أولاً.');
+    return;
+  }
+
+  // Read data (from row 3)
+  const lastRow = migrationSheet.getLastRow();
+  if (lastRow < 3) {
+    ui.alert('⚠️ لا توجد بيانات للترحيل!\n\nالصق البيانات من السطر 3.');
+    return;
+  }
+
+  const data = migrationSheet.getRange(3, 1, lastRow - 2, 11).getValues();
+
+  // Validate data
+  migrationSheet.getRange(2, 13).setValue('Validating...').setBackground('#fff9c4');
+
+  const validCurrencies = new Set(CURRENCIES);
+  const errors = [];
+  const validRows = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const rowNum = i + 3;
+    const rowErrors = [];
+
+    // Skip empty rows
+    const hasData = row.some(function(cell) { return cell !== '' && cell !== null && cell !== undefined; });
+    if (!hasData) continue;
+
+    // Company Name (required)
+    if (!row[1] || row[1].toString().trim() === '') {
+      rowErrors.push('Company Name is required (اسم الشركة مطلوب)');
+    }
+
+    // Currency (required)
+    if (!row[3]) {
+      rowErrors.push('Currency is required (العملة مطلوبة)');
+    } else if (!validCurrencies.has(row[3].toString().toUpperCase().trim())) {
+      rowErrors.push('Invalid currency: ' + row[3]);
+    }
+
+    // At least one amount must be provided
+    var closingBal = parseFloat(row[4]) || 0;
+    var janCol = parseFloat(row[5]) || 0;
+    var janRent = parseFloat(row[6]) || 0;
+    var febCol = parseFloat(row[7]) || 0;
+    var febRent = parseFloat(row[8]) || 0;
+
+    if (closingBal === 0 && janCol === 0 && janRent === 0 && febCol === 0 && febRent === 0) {
+      rowErrors.push('At least one amount must be provided (يجب ملء مبلغ واحد على الأقل)');
+    }
+
+    if (rowErrors.length > 0) {
+      errors.push({ row: rowNum, errors: rowErrors });
+    } else {
+      validRows.push({
+        rowNum: rowNum,
+        serial: row[0],
+        companyName: row[1].toString().trim(),
+        sector: row[2] ? row[2].toString().trim() : '',
+        currency: (row[3] || 'TRY').toString().toUpperCase().trim(),
+        closingBalance: closingBal,
+        janCollections: janCol,
+        janRent: janRent,
+        febCollections: febCol,
+        febRent: febRent,
+        paymentMethod: row[9] ? row[9].toString().trim() : '',
+        notes: row[10] ? row[10].toString().trim() : ''
+      });
+    }
+  }
+
+  migrationSheet.getRange(3, 14).setValue(validRows.length);
+
+  // Show errors if any
+  if (errors.length > 0) {
+    var errorMsg = '⚠️ تم العثور على ' + errors.length + ' أخطاء:\n\n';
+    errors.forEach(function(err) {
+      errorMsg += '• Row ' + err.row + ': ' + err.errors.join(', ') + '\n';
+    });
+    errorMsg += '\nصالح: ' + validRows.length + ' | أخطاء: ' + errors.length;
+    errorMsg += '\n\nهل تريد ترحيل الصفوف الصالحة فقط؟';
+
+    var proceed = ui.alert('Validation Results', errorMsg, ui.ButtonSet.YES_NO);
+    if (proceed !== ui.Button.YES) {
+      migrationSheet.getRange(2, 13).setValue('Cancelled').setBackground('#ffcdd2');
+      return;
+    }
+  }
+
+  if (validRows.length === 0) {
+    ui.alert('❌ لا توجد صفوف صالحة للترحيل!');
+    migrationSheet.getRange(2, 13).setValue('No valid data').setBackground('#ffcdd2');
+    return;
+  }
+
+  // Count expected transactions
+  var expectedTrans = 0;
+  validRows.forEach(function(item) {
+    if (item.closingBalance !== 0) expectedTrans++;
+    if (item.janCollections !== 0) expectedTrans++;
+    if (item.janRent !== 0) expectedTrans++;
+    if (item.febCollections !== 0) expectedTrans++;
+    if (item.febRent !== 0) expectedTrans++;
+  });
+
+  // Confirm
+  var confirm = ui.alert(
+    '📥 تأكيد ترحيل الحسابات القديمة\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'عدد الشركات: ' + validRows.length + '\n' +
+    'عدد المعاملات المتوقعة: ' + expectedTrans + '\n\n' +
+    '📌 سيتم:\n' +
+    '1. الأرصدة الختامية 2025 → أرصدة افتتاحية 01.01.2026\n' +
+    '2. متحصلات يناير → Revenue Collection 31.01.2026\n' +
+    '3. أجرة يناير → Expense Payment 31.01.2026\n' +
+    '4. متحصلات فبراير → Revenue Collection 28.02.2026\n' +
+    '5. أجرة فبراير → Expense Payment 28.02.2026\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    migrationSheet.getRange(2, 13).setValue('Cancelled').setBackground('#ffcdd2');
+    return;
+  }
+
+  migrationSheet.getRange(2, 13).setValue('Migrating...').setBackground('#bbdefb');
+
+  // === Process migration ===
+  var transLastRow = transSheet.getLastRow();
+  var totalImported = 0;
+  var newClients = 0;
+
+  // Prepare dates
+  var dateOpeningBalance = new Date(2026, 0, 1);  // 01.01.2026
+  var dateJan = new Date(2026, 0, 31);             // 31.01.2026
+  var dateFeb = new Date(2026, 1, 28);             // 28.02.2026
+
+  // Get or create Clients sheet reference
+  var clientsSheet = ss.getSheetByName('Clients');
+
+  validRows.forEach(function(item) {
+    var companyName = item.companyName;
+    var currency = item.currency;
+    var sector = item.sector ? mapToSectorValue(ss, item.sector) : '';
+    var notes = item.notes;
+
+    // Find or create client
+    var clientCode = findClientCode(ss, companyName);
+
+    // If client not found, add to Clients sheet
+    if (!clientCode && clientsSheet) {
+      var clientLastRow = clientsSheet.getLastRow();
+      var newCode = 'CLT-' + String(clientLastRow).padStart(3, '0');
+      clientsSheet.getRange(clientLastRow + 1, 1, 1, 5).setValues([[
+        newCode, companyName, companyName, '', 'Active'
+      ]]);
+      clientCode = newCode;
+      newClients++;
+    }
+
+    // Map payment method
+    var paymentMethod = '';
+    var cashBankVal = '';
+    if (item.paymentMethod.toLowerCase() === 'cash') {
+      paymentMethod = 'Cash (نقدي)';
+    } else if (item.paymentMethod.toLowerCase() === 'bank transfer' || item.paymentMethod.toLowerCase() === 'bank') {
+      paymentMethod = 'Bank Transfer (تحويل بنكي)';
+    } else {
+      paymentMethod = 'Accrual (استحقاق)';
+    }
+
+    // Try to find Cash/Bank
+    if (item.paymentMethod) {
+      cashBankVal = mapToCashBankValue(ss, item.paymentMethod);
+      if (cashBankVal === item.paymentMethod) cashBankVal = '';
+    }
+
+    var exchangeRate = currency === 'TRY' ? 1 : 1;
+
+    // === 1. Opening Balance (الرصيد الختامي 2025 → رصيد افتتاحي 2026) ===
+    if (item.closingBalance !== 0) {
+      transLastRow++;
+      var obRow = [
+        transLastRow - 1,                                // A: #
+        dateOpeningBalance,                               // B: Date (01.01.2026)
+        sector,                                           // C: Sector
+        'Opening Balance (رصيد افتتاحي)',                // D: Movement Type
+        'Opening Balance (رصيد افتتاحي)',                // E: Category
+        clientCode,                                       // F: Client Code
+        companyName,                                      // G: Client Name
+        '',                                               // H: Item
+        'Opening Balance - ' + companyName + ' (ترحيل من النظام القديم)',  // I: Description
+        companyName,                                      // J: Party Name
+        'Client (عميل)',                                  // K: Party Type
+        Math.abs(item.closingBalance),                    // L: Amount
+        currency,                                         // M: Currency
+        exchangeRate,                                     // N: Exchange Rate
+        Math.abs(item.closingBalance) * exchangeRate,     // O: Amount TRY
+        'Accrual (استحقاق)',                              // P: Payment Method
+        '',                                               // Q: Cash/Bank
+        'OB-2026-' + (clientCode || item.serial),         // R: Reference
+        '',                                               // S: Invoice No
+        'Paid (مدفوع)',                                   // T: Status
+        '',                                               // U: Due Date
+        Math.abs(item.closingBalance),                    // V: Paid Amount
+        0,                                                // W: Remaining
+        notes || 'Legacy Migration - Closing Balance 2025', // X: Notes
+        '',                                               // Y: Attachment
+        'Yes (نعم)'                                       // Z: Show in Statement
+      ];
+      transSheet.getRange(transLastRow, 1, 1, 26).setValues([obRow]);
+      transSheet.getRange(transLastRow, 2).setNumberFormat('dd.mm.yyyy');
+      totalImported++;
+    }
+
+    // === 2. January Collections (متحصلات يناير) ===
+    if (item.janCollections !== 0) {
+      transLastRow++;
+      var janColRow = [
+        transLastRow - 1,                                // A: #
+        dateJan,                                          // B: Date (31.01.2026)
+        sector,                                           // C: Sector
+        'Revenue Collection (تحصيل إيراد)',              // D: Movement Type
+        'Service Revenue (إيرادات خدمات)',               // E: Category
+        clientCode,                                       // F: Client Code
+        companyName,                                      // G: Client Name
+        '',                                               // H: Item
+        'January Collections - ' + companyName + ' (متحصلات يناير)',  // I: Description
+        companyName,                                      // J: Party Name
+        'Client (عميل)',                                  // K: Party Type
+        item.janCollections,                              // L: Amount
+        currency,                                         // M: Currency
+        exchangeRate,                                     // N: Exchange Rate
+        item.janCollections * exchangeRate,               // O: Amount TRY
+        paymentMethod,                                    // P: Payment Method
+        cashBankVal,                                      // Q: Cash/Bank
+        'MIG-JAN-COL-' + (clientCode || item.serial),    // R: Reference
+        '',                                               // S: Invoice No
+        'Paid (مدفوع)',                                   // T: Status
+        '',                                               // U: Due Date
+        item.janCollections,                              // V: Paid Amount
+        0,                                                // W: Remaining
+        notes || 'Legacy Migration - Jan Collections',    // X: Notes
+        '',                                               // Y: Attachment
+        'Yes (نعم)'                                       // Z: Show in Statement
+      ];
+      transSheet.getRange(transLastRow, 1, 1, 26).setValues([janColRow]);
+      transSheet.getRange(transLastRow, 2).setNumberFormat('dd.mm.yyyy');
+      totalImported++;
+    }
+
+    // === 3. January Rent (أجرة يناير) ===
+    if (item.janRent !== 0) {
+      transLastRow++;
+      var janRentRow = [
+        transLastRow - 1,                                // A: #
+        dateJan,                                          // B: Date (31.01.2026)
+        sector,                                           // C: Sector
+        'Expense Payment (دفع مصروف)',                   // D: Movement Type
+        'Direct Expenses (مصاريف مباشرة)',               // E: Category
+        clientCode,                                       // F: Client Code
+        companyName,                                      // G: Client Name
+        '',                                               // H: Item
+        'January Rent - ' + companyName + ' (أجرة يناير)', // I: Description
+        companyName,                                      // J: Party Name
+        'Client (عميل)',                                  // K: Party Type
+        item.janRent,                                     // L: Amount
+        currency,                                         // M: Currency
+        exchangeRate,                                     // N: Exchange Rate
+        item.janRent * exchangeRate,                      // O: Amount TRY
+        paymentMethod,                                    // P: Payment Method
+        cashBankVal,                                      // Q: Cash/Bank
+        'MIG-JAN-RENT-' + (clientCode || item.serial),   // R: Reference
+        '',                                               // S: Invoice No
+        'Paid (مدفوع)',                                   // T: Status
+        '',                                               // U: Due Date
+        item.janRent,                                     // V: Paid Amount
+        0,                                                // W: Remaining
+        notes || 'Legacy Migration - Jan Rent',           // X: Notes
+        '',                                               // Y: Attachment
+        'Yes (نعم)'                                       // Z: Show in Statement
+      ];
+      transSheet.getRange(transLastRow, 1, 1, 26).setValues([janRentRow]);
+      transSheet.getRange(transLastRow, 2).setNumberFormat('dd.mm.yyyy');
+      totalImported++;
+    }
+
+    // === 4. February Collections (متحصلات فبراير) ===
+    if (item.febCollections !== 0) {
+      transLastRow++;
+      var febColRow = [
+        transLastRow - 1,                                // A: #
+        dateFeb,                                          // B: Date (28.02.2026)
+        sector,                                           // C: Sector
+        'Revenue Collection (تحصيل إيراد)',              // D: Movement Type
+        'Service Revenue (إيرادات خدمات)',               // E: Category
+        clientCode,                                       // F: Client Code
+        companyName,                                      // G: Client Name
+        '',                                               // H: Item
+        'February Collections - ' + companyName + ' (متحصلات فبراير)', // I: Description
+        companyName,                                      // J: Party Name
+        'Client (عميل)',                                  // K: Party Type
+        item.febCollections,                              // L: Amount
+        currency,                                         // M: Currency
+        exchangeRate,                                     // N: Exchange Rate
+        item.febCollections * exchangeRate,               // O: Amount TRY
+        paymentMethod,                                    // P: Payment Method
+        cashBankVal,                                      // Q: Cash/Bank
+        'MIG-FEB-COL-' + (clientCode || item.serial),    // R: Reference
+        '',                                               // S: Invoice No
+        'Paid (مدفوع)',                                   // T: Status
+        '',                                               // U: Due Date
+        item.febCollections,                              // V: Paid Amount
+        0,                                                // W: Remaining
+        notes || 'Legacy Migration - Feb Collections',    // X: Notes
+        '',                                               // Y: Attachment
+        'Yes (نعم)'                                       // Z: Show in Statement
+      ];
+      transSheet.getRange(transLastRow, 1, 1, 26).setValues([febColRow]);
+      transSheet.getRange(transLastRow, 2).setNumberFormat('dd.mm.yyyy');
+      totalImported++;
+    }
+
+    // === 5. February Rent (أجرة فبراير) ===
+    if (item.febRent !== 0) {
+      transLastRow++;
+      var febRentRow = [
+        transLastRow - 1,                                // A: #
+        dateFeb,                                          // B: Date (28.02.2026)
+        sector,                                           // C: Sector
+        'Expense Payment (دفع مصروف)',                   // D: Movement Type
+        'Direct Expenses (مصاريف مباشرة)',               // E: Category
+        clientCode,                                       // F: Client Code
+        companyName,                                      // G: Client Name
+        '',                                               // H: Item
+        'February Rent - ' + companyName + ' (أجرة فبراير)', // I: Description
+        companyName,                                      // J: Party Name
+        'Client (عميل)',                                  // K: Party Type
+        item.febRent,                                     // L: Amount
+        currency,                                         // M: Currency
+        exchangeRate,                                     // N: Exchange Rate
+        item.febRent * exchangeRate,                      // O: Amount TRY
+        paymentMethod,                                    // P: Payment Method
+        cashBankVal,                                      // Q: Cash/Bank
+        'MIG-FEB-RENT-' + (clientCode || item.serial),   // R: Reference
+        '',                                               // S: Invoice No
+        'Paid (مدفوع)',                                   // T: Status
+        '',                                               // U: Due Date
+        item.febRent,                                     // V: Paid Amount
+        0,                                                // W: Remaining
+        notes || 'Legacy Migration - Feb Rent',           // X: Notes
+        '',                                               // Y: Attachment
+        'Yes (نعم)'                                       // Z: Show in Statement
+      ];
+      transSheet.getRange(transLastRow, 1, 1, 26).setValues([febRentRow]);
+      transSheet.getRange(transLastRow, 2).setNumberFormat('dd.mm.yyyy');
+      totalImported++;
+    }
+
+    // Mark row as migrated in the migration sheet
+    migrationSheet.getRange(item.rowNum, 1, 1, 11).setBackground('#c8e6c9');
+  });
+
+  // Mark error rows
+  errors.forEach(function(err) {
+    migrationSheet.getRange(err.row, 1, 1, 11).setBackground('#ffcdd2');
+  });
+
+  // Update status
+  migrationSheet.getRange(2, 13).setValue('Done ✅').setBackground('#c8e6c9');
+  migrationSheet.getRange(4, 14).setValue(totalImported);
+
+  ui.alert(
+    '✅ Legacy Migration Complete!\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'Companies: ' + validRows.length + '\n' +
+    'New Clients Added: ' + newClients + '\n' +
+    'Transactions Created: ' + totalImported + '\n' +
+    'Errors: ' + errors.length + '\n\n' +
+    '🟢 Green rows = migrated successfully\n' +
+    '🔴 Red rows = errors (not migrated)\n\n' +
+    '💡 Next steps:\n' +
+    '• Check Transactions sheet for imported data\n' +
+    '• Use "Sync to Cash/Bank" if needed\n' +
+    '• Verify opening balances are correct'
+  );
+
+  ss.setActiveSheet(transSheet);
+}
+
+/**
+ * مسح بيانات شيت Legacy Migration
+ */
+function clearLegacyMigrationSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  var sheet = ss.getSheetByName('Legacy Migration');
+  if (!sheet) {
+    ui.alert('❌ شيت Legacy Migration غير موجود!');
+    return;
+  }
+
+  var confirm = ui.alert(
+    '🗑️ مسح بيانات الترحيل\n\n' +
+    'هل تريد مسح كل البيانات من شيت Legacy Migration؟\n' +
+    '(الهيدرات والتعليمات ستبقى)',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 2) {
+    sheet.getRange(3, 1, lastRow - 2, 11).clear();
+    sheet.getRange(3, 1, lastRow - 2, 11).setBackground(null);
+  }
+
+  sheet.getRange(2, 13).setValue('Ready').setBackground('#c8e6c9');
+  sheet.getRange(3, 14).setValue(0);
+  sheet.getRange(4, 14).setValue(0);
+
+  ui.alert('✅ تم مسح بيانات الترحيل!');
+}
+
 // ==================== END OF PART 11 ====================
