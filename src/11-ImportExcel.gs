@@ -1091,7 +1091,7 @@ function createLegacyMigrationSheet() {
   sheet = ss.insertSheet('Legacy Migration');
   sheet.setTabColor('#9c27b0');
 
-  // === Headers (11 columns) ===
+  // === Headers (12 columns) ===
   const headers = [
     '#\nم',                                        // A (1)
     'Company Name\nاسم الشركة',                    // B (2)
@@ -1103,7 +1103,8 @@ function createLegacyMigrationSheet() {
     'Feb Collections\nمتحصلات فبراير',             // H (8)
     'Feb Rent\nأجرة فبراير',                       // I (9)
     'Payment Method\nطريقة الدفع',                 // J (10)
-    'Notes\nملاحظات'                               // K (11)
+    'Status\nالحالة',                              // K (11)
+    'Notes\nملاحظات'                               // L (12)
   ];
 
   sheet.getRange(1, 1, 1, headers.length)
@@ -1129,6 +1130,7 @@ function createLegacyMigrationSheet() {
     'إجمالي متحصلات\nفبراير 2026',
     'إجمالي أجرة\nفبراير 2026',
     'Cash / Bank Transfer',
+    'Active / Inactive',
     'ملاحظات إضافية'
   ];
 
@@ -1145,7 +1147,7 @@ function createLegacyMigrationSheet() {
   sheet.setRowHeight(2, 65);
 
   // Column widths
-  const widths = [40, 200, 160, 80, 140, 140, 140, 140, 140, 150, 200];
+  const widths = [40, 200, 160, 80, 140, 140, 140, 140, 140, 150, 100, 200];
   widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
   const dataRows = 200;
@@ -1168,24 +1170,32 @@ function createLegacyMigrationSheet() {
     .setAllowInvalid(true).build();
   sheet.getRange(3, 10, dataRows, 1).setDataValidation(payRule);
 
-  // === Status area ===
-  sheet.getRange(1, 13).setValue('MIGRATION STATUS').setFontWeight('bold').setBackground('#9c27b0').setFontColor('#ffffff');
-  sheet.getRange(2, 13).setValue('Ready').setBackground('#c8e6c9').setFontWeight('bold');
-  sheet.getRange(3, 13).setValue('Companies:').setFontWeight('bold');
-  sheet.getRange(3, 14).setValue(0);
-  sheet.getRange(4, 13).setValue('Transactions:').setFontWeight('bold');
-  sheet.getRange(4, 14).setValue(0);
+  // Status dropdown (Active/Inactive)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .setAllowInvalid(false).build();
+  sheet.getRange(3, 11, dataRows, 1).setDataValidation(statusRule);
+  // Default to Active
+  sheet.getRange(3, 11, dataRows, 1).setValue('Active');
 
-  sheet.setColumnWidth(13, 120);
-  sheet.setColumnWidth(14, 80);
+  // === Status area ===
+  sheet.getRange(1, 14).setValue('MIGRATION STATUS').setFontWeight('bold').setBackground('#9c27b0').setFontColor('#ffffff');
+  sheet.getRange(2, 14).setValue('Ready').setBackground('#c8e6c9').setFontWeight('bold');
+  sheet.getRange(3, 14).setValue('Companies:').setFontWeight('bold');
+  sheet.getRange(3, 15).setValue(0);
+  sheet.getRange(4, 14).setValue('Transactions:').setFontWeight('bold');
+  sheet.getRange(4, 15).setValue(0);
+
+  sheet.setColumnWidth(14, 120);
+  sheet.setColumnWidth(15, 80);
 
   sheet.setFrozenRows(2);
 
   // Add sample data (row 3)
-  sheet.getRange(3, 1, 1, 11).setValues([[
-    1, 'Example Company (مثال)', '', 'TRY', 15000, 5000, 3000, 6000, 3000, 'Bank Transfer', 'مثال - احذف هذا السطر'
+  sheet.getRange(3, 1, 1, 12).setValues([[
+    1, 'Example Company (مثال)', '', 'TRY', 15000, 5000, 3000, 6000, 3000, 'Bank Transfer', 'Active', 'مثال - احذف هذا السطر'
   ]]);
-  sheet.getRange(3, 1, 1, 11).setBackground('#fff9c4').setFontStyle('italic');
+  sheet.getRange(3, 1, 1, 12).setBackground('#fff9c4').setFontStyle('italic');
 
   ss.setActiveSheet(sheet);
   sheet.setActiveRange(sheet.getRange('A3'));
@@ -1221,7 +1231,8 @@ function createLegacyMigrationSheet() {
     'H = متحصلات فبراير\n' +
     'I = أجرة فبراير\n' +
     'J = طريقة الدفع (Cash/Bank Transfer)\n' +
-    'K = ملاحظات\n\n' +
+    'K = الحالة (Active/Inactive)\n' +
+    'L = ملاحظات\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'الخطوات:\n' +
     '1. الصق البيانات من السطر 3\n' +
@@ -1263,10 +1274,10 @@ function importLegacyAccounts() {
     return;
   }
 
-  const data = migrationSheet.getRange(3, 1, lastRow - 2, 11).getValues();
+  const data = migrationSheet.getRange(3, 1, lastRow - 2, 12).getValues();
 
   // Validate data
-  migrationSheet.getRange(2, 13).setValue('Validating...').setBackground('#fff9c4');
+  migrationSheet.getRange(2, 14).setValue('Validating...').setBackground('#fff9c4');
 
   const validCurrencies = new Set(CURRENCIES);
   const errors = [];
@@ -1319,12 +1330,13 @@ function importLegacyAccounts() {
         febCollections: febCol,
         febRent: febRent,
         paymentMethod: row[9] ? row[9].toString().trim() : '',
-        notes: row[10] ? row[10].toString().trim() : ''
+        status: row[10] ? row[10].toString().trim() : 'Active',
+        notes: row[11] ? row[11].toString().trim() : ''
       });
     }
   }
 
-  migrationSheet.getRange(3, 14).setValue(validRows.length);
+  migrationSheet.getRange(3, 15).setValue(validRows.length);
 
   // Show errors if any
   if (errors.length > 0) {
@@ -1337,14 +1349,14 @@ function importLegacyAccounts() {
 
     var proceed = ui.alert('Validation Results', errorMsg, ui.ButtonSet.YES_NO);
     if (proceed !== ui.Button.YES) {
-      migrationSheet.getRange(2, 13).setValue('Cancelled').setBackground('#ffcdd2');
+      migrationSheet.getRange(2, 14).setValue('Cancelled').setBackground('#ffcdd2');
       return;
     }
   }
 
   if (validRows.length === 0) {
     ui.alert('❌ لا توجد صفوف صالحة للترحيل!');
-    migrationSheet.getRange(2, 13).setValue('No valid data').setBackground('#ffcdd2');
+    migrationSheet.getRange(2, 14).setValue('No valid data').setBackground('#ffcdd2');
     return;
   }
 
@@ -1375,11 +1387,11 @@ function importLegacyAccounts() {
   );
 
   if (confirm !== ui.Button.YES) {
-    migrationSheet.getRange(2, 13).setValue('Cancelled').setBackground('#ffcdd2');
+    migrationSheet.getRange(2, 14).setValue('Cancelled').setBackground('#ffcdd2');
     return;
   }
 
-  migrationSheet.getRange(2, 13).setValue('Migrating...').setBackground('#bbdefb');
+  migrationSheet.getRange(2, 14).setValue('Migrating...').setBackground('#bbdefb');
 
   // === Process migration ===
   var transLastRow = transSheet.getLastRow();
@@ -1403,12 +1415,13 @@ function importLegacyAccounts() {
     // Find or create client
     var clientCode = findClientCode(ss, companyName);
 
-    // If client not found, add to Clients sheet
+    // If client not found, add to Clients sheet with their status
     if (!clientCode && clientsSheet) {
       var clientLastRow = clientsSheet.getLastRow();
       var newCode = 'CLT-' + String(clientLastRow).padStart(3, '0');
+      var clientStatus = item.status === 'Inactive' ? 'Inactive' : 'Active';
       clientsSheet.getRange(clientLastRow + 1, 1, 1, 5).setValues([[
-        newCode, companyName, companyName, '', 'Active'
+        newCode, companyName, companyName, '', clientStatus
       ]]);
       clientCode = newCode;
       newClients++;
@@ -1614,17 +1627,17 @@ function importLegacyAccounts() {
     }
 
     // Mark row as migrated in the migration sheet
-    migrationSheet.getRange(item.rowNum, 1, 1, 11).setBackground('#c8e6c9');
+    migrationSheet.getRange(item.rowNum, 1, 1, 12).setBackground('#c8e6c9');
   });
 
   // Mark error rows
   errors.forEach(function(err) {
-    migrationSheet.getRange(err.row, 1, 1, 11).setBackground('#ffcdd2');
+    migrationSheet.getRange(err.row, 1, 1, 12).setBackground('#ffcdd2');
   });
 
   // Update status
-  migrationSheet.getRange(2, 13).setValue('Done ✅').setBackground('#c8e6c9');
-  migrationSheet.getRange(4, 14).setValue(totalImported);
+  migrationSheet.getRange(2, 14).setValue('Done ✅').setBackground('#c8e6c9');
+  migrationSheet.getRange(4, 15).setValue(totalImported);
 
   ui.alert(
     '✅ Legacy Migration Complete!\n\n' +
@@ -1668,13 +1681,13 @@ function clearLegacyMigrationSheet() {
 
   var lastRow = sheet.getLastRow();
   if (lastRow > 2) {
-    sheet.getRange(3, 1, lastRow - 2, 11).clear();
-    sheet.getRange(3, 1, lastRow - 2, 11).setBackground(null);
+    sheet.getRange(3, 1, lastRow - 2, 12).clear();
+    sheet.getRange(3, 1, lastRow - 2, 12).setBackground(null);
   }
 
-  sheet.getRange(2, 13).setValue('Ready').setBackground('#c8e6c9');
-  sheet.getRange(3, 14).setValue(0);
-  sheet.getRange(4, 14).setValue(0);
+  sheet.getRange(2, 14).setValue('Ready').setBackground('#c8e6c9');
+  sheet.getRange(3, 15).setValue(0);
+  sheet.getRange(4, 15).setValue(0);
 
   ui.alert('✅ تم مسح بيانات الترحيل!');
 }
