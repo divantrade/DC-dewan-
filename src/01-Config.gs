@@ -152,12 +152,15 @@ function onOpen() {
     .addSubMenu(ui.createMenu('📥 Import (استيراد)')
       .addItem('📋 Create Import Sheet (إنشاء شيت الاستيراد)', 'createImportSheet')
       .addItem('📋 Create Opening Balances Sheet', 'createOpeningBalancesImportSheet')
+      .addItem('📋 Create Legacy Migration Sheet (ترحيل حسابات قديمة)', 'createLegacyMigrationSheet')
       .addSeparator()
       .addItem('📥 Import Transactions from Sheet', 'importTransactionsFromSheet')
       .addItem('📥 Import Opening Balances', 'importOpeningBalances')
+      .addItem('📥 Migrate Legacy Accounts (ترحيل الحسابات)', 'importLegacyAccounts')
       .addSeparator()
       .addItem('🗑️ Clear Import Sheet', 'clearImportSheet')
-      .addItem('🗑️ Clear Opening Balances Sheet', 'clearOpeningBalancesSheet'))
+      .addItem('🗑️ Clear Opening Balances Sheet', 'clearOpeningBalancesSheet')
+      .addItem('🗑️ Clear Legacy Migration Sheet', 'clearLegacyMigrationSheet'))
 
     // Help
     .addSeparator()
