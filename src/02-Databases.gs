@@ -26,7 +26,7 @@ function createSettingsSheet(ss) {
     ['Company Address', 'Beycenter, Cumhuriyet, 1991. Sk., 34515 Esenyurt/İstanbul'],
     ['Company Phone', '+90 (552) 740 60 13'],
     ['Company Email', 'sales@aldewan.net'],
-    ['Company Logo URL', ''],
+    ['Company Logo URL', 'https://drive.google.com/file/d/1retRm0IhrHep3s4BB0bIAhyvpdBIrSxm/view?usp=sharing'],
     ['Tax Office', 'Gunesli'],
     ['Tax Number', '0471079224'],
     ['', ''],
@@ -142,7 +142,7 @@ function createHolidaysSheet(ss) {
   sheet.setColumnWidth(5, 100);
   sheet.setColumnWidth(6, 60);
   
-  sheet.getRange(2, 1, holidays2025.length, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.getRange(2, 1, holidays2025.length, 1).setNumberFormat('dd.mm.yyyy');
   sheet.setFrozenRows(1);
   
   return sheet;
@@ -382,7 +382,437 @@ function createItemsDatabase(ss) {
   return sheet;
 }
 
-// ==================== 6. HELPER: ALTERNATING COLORS ====================
+// ==================== 6. SECTOR PROFILES SHEET (Unified) ====================
+/**
+ * Sector Profiles - unified sheet replacing old Activities + Activity Profiles
+ * Each sector (Accounting, Consulting, etc.) has:
+ * - Sector names (EN/AR/TR) for dropdowns
+ * - Company branding (names, logo, website) for invoices
+ * - Bank details per sector
+ * Shared fields (Address, Phone, Email) come from Settings
+ */
+function createSectorProfilesSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Sector Profiles');
+  if (sheet) ss.deleteSheet(sheet);
+
+  sheet = ss.insertSheet('Sector Profiles');
+  sheet.setTabColor('#00695c');
+
+  const headers = [
+    'Sector Code',          // A - e.g. ACC, CON, LOG
+    'Sector Name (EN)',     // B
+    'Sector Name (AR)',     // C
+    'Sector Name (TR)',     // D
+    'Company Name (EN)',    // E
+    'Company Name (AR)',    // F
+    'Company Name (TR)',    // G
+    'Logo URL',             // H - Google Drive link
+    'Website',              // I
+    'Bank Name',            // J
+    'IBAN TRY',             // K
+    'IBAN USD',             // L
+    'SWIFT Code',           // M
+    'Status',               // N
+    'Notes'                 // O
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  const widths = [100, 150, 140, 160, 200, 180, 200, 300, 200, 150, 260, 260, 120, 80, 200];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  // Default data
+  const data = [
+    ['ACC', 'Accounting',  'محاسبة',      'Muhasebe',      'Dewan Accounting',  'ديوان للمحاسبة',    'DİVAN MUHASEBECİLİK', '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['CON', 'Consulting',  'استشارات',     'Danışmanlık',   'Dewan Consulting',  'ديوان للاستشارات',   'DİVAN DANIŞMANLIK',   '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['LOG', 'Logistics',   'لوجستيات',     'Lojistik',      'DVN Log',           'دي في ان لوجيستك',   'DİVAN LOJİSTİK',      '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['TRD', 'Trading',     'تجارة',        'Ticaret',       'Divan Trading',     'ديوان للتجارة',      'DİVAN TİCARET',        '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['INS', 'Inspection',  'تفتيش',        'Denetim',       'Certify',           'سيرتفاي',           'CERTİFY',              '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', ''],
+    ['TUR', 'Tourism',     'سياحة',        'Turizm',        'Divan Tours',       'ديوان للسياحة',      'DİVAN TURİZM',         '', '', 'Kuveyt Türk', '', '', 'KTEFTRIS', 'Active', '']
+  ];
+
+  sheet.getRange(2, 1, data.length, headers.length).setValues(data);
+
+  const lastRow = 20;
+
+  // Status validation (column N = 14)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .build();
+  sheet.getRange(2, 14, lastRow, 1).setDataValidation(statusRule);
+
+  // Conditional formatting for Status
+  const statusRange = sheet.getRange(2, 14, lastRow, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Inactive').setBackground(COLORS.warning).setRanges([statusRange]).build()
+  ]);
+
+  sheet.setFrozenRows(1);
+
+  // Notes
+  sheet.getRange('A1').setNote('Sector Code: Short code (ACC, CON, LOG, TRD, INS, TUR)');
+  sheet.getRange('B1').setNote('Sector Name EN - used in dropdowns and invoices');
+  sheet.getRange('H1').setNote('Google Drive sharing link for the logo image');
+  sheet.getRange('I1').setNote('Website URL for this sector');
+  sheet.getRange('K1').setNote('IBAN for TRY transactions');
+  sheet.getRange('L1').setNote('IBAN for USD transactions');
+
+  applyAlternatingColors(sheet, 2, data.length, headers.length);
+
+  return sheet;
+}
+
+/**
+ * Add a new sector to Sector Profiles
+ */
+function addNewSector() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Sector Profiles');
+
+  if (!sheet) {
+    ui.alert('⚠️ Sector Profiles sheet not found!\n\nRun "Setup System" first.');
+    return;
+  }
+
+  const lastRow = sheet.getLastRow() + 1;
+
+  // Set defaults
+  sheet.getRange(lastRow, 14).setValue('Active');
+
+  sheet.setActiveRange(sheet.getRange(lastRow, 1));
+  ss.setActiveSheet(sheet);
+
+  ui.alert(
+    '🏭 Add New Sector (إضافة قطاع جديد)\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'Row: ' + lastRow + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'Required fields (الحقول المطلوبة):\n' +
+    '• Sector Code (e.g. ACC, CON)\n' +
+    '• Sector Name (EN/AR/TR)\n' +
+    '• Company Name (EN/AR/TR)\n' +
+    '• Bank Details'
+  );
+}
+
+/**
+ * Get list of active sectors for dropdowns
+ * Replaces old getActivitiesList()
+ * @returns {Array} - List of active sectors
+ */
+function getSectorsList() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Sector Profiles');
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const sectors = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][13] === 'Active' && data[i][1]) { // Status=N(14), NameEN=B(2)
+      sectors.push({
+        code: data[i][0],
+        nameEN: data[i][1],
+        nameAR: data[i][2],
+        nameTR: data[i][3],
+        companyNameEN: data[i][4],
+        companyNameAR: data[i][5],
+        companyNameTR: data[i][6],
+        display: data[i][1] + ' (' + (data[i][2] || data[i][1]) + ')'
+      });
+    }
+  }
+  return sectors;
+}
+
+// ==================== 6b. CLIENT SECTOR SHEET ====================
+function createClientSectorSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+
+  // Delete old "Client Activities" sheet if it exists (renamed to "Client Sector")
+  const oldSheet = ss.getSheetByName('Client Activities');
+  if (oldSheet) ss.deleteSheet(oldSheet);
+
+  let sheet = ss.getSheetByName('Client Sector');
+  if (sheet) ss.deleteSheet(sheet);
+
+  sheet = ss.insertSheet('Client Sector');
+  sheet.setTabColor('#00838f');
+
+  const headers = [
+    'Client Code',       // A
+    'Client Name',       // B
+    'Sector',            // C
+    'Fee Type',          // D - Monthly / Per-Job
+    'Monthly Fee',       // E
+    'Currency',          // F
+    'Start Date',        // G
+    'Status',            // H
+    'Notes'              // I
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground(COLORS.header)
+    .setFontColor(COLORS.headerText)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  const widths = [100, 200, 140, 100, 120, 80, 110, 80, 200];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+
+  const lastRow = 500;
+
+  // Fee Type validation (column D)
+  const feeTypeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Monthly', 'Per-Job'], true)
+    .build();
+  sheet.getRange(2, 4, lastRow, 1).setDataValidation(feeTypeRule);
+
+  // Sector validation (column C)
+  const sectorRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Accounting', 'Consulting', 'Logistics', 'Trading', 'Inspection', 'Tourism', 'Other'], true)
+    .build();
+  sheet.getRange(2, 3, lastRow, 1).setDataValidation(sectorRule);
+
+  // Currency validation (column F)
+  const currencyRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CURRENCIES, true)
+    .build();
+  sheet.getRange(2, 6, lastRow, 1).setDataValidation(currencyRule);
+
+  // Status validation (column H)
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Active', 'Inactive'], true)
+    .build();
+  sheet.getRange(2, 8, lastRow, 1).setDataValidation(statusRule);
+
+  // Number formats
+  sheet.getRange(2, 5, lastRow, 1).setNumberFormat('#,##0.00');
+  sheet.getRange(2, 7, lastRow, 1).setNumberFormat('dd.mm.yyyy');
+
+  // Conditional formatting for Fee Type
+  const feeTypeRange = sheet.getRange(2, 4, lastRow, 1);
+  const statusRange = sheet.getRange(2, 8, lastRow, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Monthly').setBackground('#bbdefb').setRanges([feeTypeRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Per-Job').setBackground('#e1bee7').setRanges([feeTypeRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Active').setBackground(COLORS.success).setRanges([statusRange]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Inactive').setBackground(COLORS.warning).setRanges([statusRange]).build()
+  ]);
+
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(2);
+
+  // Add notes
+  sheet.getRange('D1').setNote('Monthly = فيز شهري ثابت (Accounting/Consulting)\nPer-Job = حسب المعاملة (Logistics/Inspection/Trading/Tourism)');
+  sheet.getRange('E1').setNote('Monthly Fee: Only for Monthly fee type activities (Accounting/Consulting)');
+
+  return sheet;
+}
+
+function addClientSector() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss.getSheetByName('Client Sector');
+
+  if (!sheet) {
+    ui.alert('⚠️ Client Sector sheet not found!\n\nRun "Setup System" first.');
+    return;
+  }
+
+  const lastRow = sheet.getLastRow() + 1;
+
+  // Set defaults
+  sheet.getRange(lastRow, 4).setValue('Monthly'); // Fee Type
+  sheet.getRange(lastRow, 6).setValue('TRY'); // Currency
+  sheet.getRange(lastRow, 7).setValue(new Date()); // Start Date
+  sheet.getRange(lastRow, 8).setValue('Active'); // Status
+
+  sheet.setActiveRange(sheet.getRange(lastRow, 1));
+  ss.setActiveSheet(sheet);
+
+  ui.alert(
+    '📋 Add Client Sector (إضافة قطاع عميل)\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'Row: ' + lastRow + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'Required fields:\n' +
+    '• Client Code\n' +
+    '• Sector (Accounting/Consulting/Logistics/...)\n' +
+    '• Fee Type (Monthly/Per-Job)\n' +
+    '• Monthly Fee (for Monthly type only)'
+  );
+}
+
+/**
+ * Get all client activities, optionally filtered
+ * @param {string} [clientCode] - Filter by client code
+ * @param {string} [feeType] - Filter by fee type ('Monthly' or 'Per-Job')
+ * @returns {Array} - List of client activities
+ */
+function getClientSectorList(clientCode, feeType) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Client Sector');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const activities = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][7] !== 'Active' || !data[i][0]) continue;
+    if (clientCode && data[i][0] !== clientCode) continue;
+    if (feeType && data[i][3] !== feeType) continue;
+
+    activities.push({
+      clientCode: data[i][0],
+      clientName: data[i][1],
+      activity: data[i][2],
+      feeType: data[i][3],
+      monthlyFee: data[i][4] || 0,
+      currency: data[i][5] || 'TRY',
+      startDate: data[i][6],
+      status: data[i][7],
+      notes: data[i][8] || ''
+    });
+  }
+  return activities;
+}
+
+/**
+ * Get clients with monthly fees (from Client Sector sheet)
+ * Used for monthly invoice generation
+ * @returns {Array} - List of {clientCode, clientName, activity, monthlyFee, currency}
+ */
+function getClientsWithMonthlyFees() {
+  return getClientSectorList(null, 'Monthly').filter(a => a.monthlyFee > 0);
+}
+
+// ==================== 7. SECTOR PROFILE FUNCTIONS ====================
+/**
+ * Get sector profile (branding) for a specific sector
+ * Falls back to Settings for shared fields (address, phone, email)
+ * Replaces old getActivityProfile()
+ * @param {string} sectorName - e.g. 'Accounting', 'Consulting'
+ * @returns {object} - Sector profile with branding info
+ */
+function getSectorProfile(sectorName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Sector Profiles');
+
+  // Default: use Settings if no Sector Profiles sheet
+  if (!sheet || !sectorName) {
+    return getDefaultProfile();
+  }
+
+  // Handle bilingual dropdown format: "Accounting (محاسبة)" → "Accounting"
+  let cleanName = sectorName;
+  const parenIndex = sectorName.indexOf(' (');
+  if (parenIndex > 0) {
+    cleanName = sectorName.substring(0, parenIndex);
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    // Match by Sector Name EN (col B=1) or Sector Code (col A=0)
+    // Also match cleaned name from bilingual dropdown
+    if ((data[i][1] === sectorName || data[i][1] === cleanName || data[i][0] === sectorName || data[i][0] === cleanName) && data[i][13] === 'Active') {
+      return {
+        sector: data[i][1],
+        sectorCode: data[i][0],
+        sectorNameAR: data[i][2] || '',
+        sectorNameTR: data[i][3] || '',
+        companyNameEN: data[i][4] || getSettingValue('Company Name (EN)') || '',
+        companyNameAR: data[i][5] || getSettingValue('Company Name (AR)') || '',
+        companyNameTR: data[i][6] || getSettingValue('Company Name (TR)') || '',
+        logoUrl: data[i][7] || getSettingValue('Company Logo URL') || '',
+        website: data[i][8] || '',
+        bankName: data[i][9] || getSettingValue('Bank Name') || '',
+        ibanTRY: data[i][10] || getSettingValue('IBAN TRY') || '',
+        ibanUSD: data[i][11] || getSettingValue('IBAN USD') || '',
+        swiftCode: data[i][12] || getSettingValue('SWIFT Code') || '',
+        // Shared fields from Settings
+        address: getSettingValue('Company Address') || '',
+        phone: getSettingValue('Company Phone') || '',
+        email: getSettingValue('Company Email') || ''
+      };
+    }
+  }
+
+  // Sector not found - use defaults
+  return getDefaultProfile();
+}
+
+// Backward-compatible alias
+function getActivityProfile(activityName) {
+  return getSectorProfile(activityName);
+}
+
+/**
+ * Get default profile from Settings (fallback)
+ */
+function getDefaultProfile() {
+  return {
+    sector: '',
+    sectorCode: '',
+    sectorNameAR: '',
+    sectorNameTR: '',
+    companyNameEN: getSettingValue('Company Name (EN)') || 'Dewan Consulting',
+    companyNameAR: getSettingValue('Company Name (AR)') || 'ديوان للاستشارات',
+    companyNameTR: getSettingValue('Company Name (TR)') || 'DİVAN DANIŞMANLIK',
+    logoUrl: getSettingValue('Company Logo URL') || '',
+    website: '',
+    bankName: getSettingValue('Bank Name') || 'Kuveyt Türk',
+    ibanTRY: getSettingValue('IBAN TRY') || '',
+    ibanUSD: getSettingValue('IBAN USD') || '',
+    swiftCode: getSettingValue('SWIFT Code') || 'KTEFTRIS',
+    address: getSettingValue('Company Address') || '',
+    phone: getSettingValue('Company Phone') || '',
+    email: getSettingValue('Company Email') || ''
+  };
+}
+
+/**
+ * Get client's primary sector from Client Sector sheet
+ * @param {string} clientCode - Client code
+ * @returns {string} - Sector name (e.g. 'Accounting') or empty string
+ */
+function getClientPrimarySector(clientCode) {
+  const activities = getClientSectorList(clientCode);
+  if (activities.length > 0) {
+    return activities[0].activity;
+  }
+  return '';
+}
+
+// Backward-compatible alias
+function getClientPrimaryActivity(clientCode) {
+  return getClientPrimarySector(clientCode);
+}
+
+function showSectorProfiles() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Sector Profiles');
+  if (sheet) ss.setActiveSheet(sheet);
+  else SpreadsheetApp.getUi().alert('⚠️ Sector Profiles sheet not found!\n\nRun "Setup System" first.');
+}
+
+// ==================== 8. HELPER: ALTERNATING COLORS ====================
 function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   for (let i = 0; i < numRows; i++) {
     const rowRange = sheet.getRange(startRow + i, 1, 1, numCols);
@@ -394,7 +824,7 @@ function applyAlternatingColors(sheet, startRow, numRows, numCols) {
   }
 }
 
-// ==================== 7. GET FUNCTIONS ====================
+// ==================== 9. GET FUNCTIONS ====================
 function getCategoriesList() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Categories');
@@ -469,4 +899,4 @@ function getItemsList(type) {
   return items;
 }
 
-// ==================== END OF PART 2 ====================
+// ==================== END OF PART 2 (v3.1) ====================
