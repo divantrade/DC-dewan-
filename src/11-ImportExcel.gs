@@ -1347,10 +1347,10 @@ function importLegacyAccounts() {
       }
     }
 
-    // Amount (required) - col 7
+    // Amount - col 7 (required > 0 for Collection/Invoice, 0 allowed for Opening Balance)
     var amount = parseFloat(row[7]) || 0;
-    if (amount === 0) {
-      rowErrors.push('Amount must be > 0 (المبلغ مطلوب)');
+    if (amount === 0 && transType !== 'Opening Balance') {
+      rowErrors.push('Amount must be > 0 for ' + transType + ' (المبلغ مطلوب)');
     }
 
     if (rowErrors.length > 0) {
@@ -1486,6 +1486,12 @@ function importLegacyAccounts() {
     var cashBank = resolveCashBank(item.payMethod);
     var exchangeRate = currency === 'TRY' ? 1 : 1;
     var amountTRY = item.amount * exchangeRate;
+
+    // Skip transaction creation for Opening Balance with 0 amount (client still gets registered above)
+    if (item.transType === 'Opening Balance' && item.amount === 0) {
+      migrationSheet.getRange(item.rowNum, 1, 1, 11).setBackground('#c8e6c9');
+      return;
+    }
 
     transLastRow++;
     var transRow;
