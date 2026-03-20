@@ -1205,10 +1205,10 @@ function createLegacyMigrationSheet() {
 
   // Add sample data (rows 3-6)
   var sampleData = [
-    [1, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Opening Balance', '01.01.2026', 15000, '', 'رصيد مرحّل من 2025', 'مثال - احذف'],
-    [2, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Collection',      '15.01.2026', 5000,  'Bank Transfer', 'سداد فاتورة يناير',  ''],
-    [3, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Collection',      '28.01.2026', 3000,  'Cash', 'دفعة نقدية ثانية',  ''],
-    [4, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Invoice',         '01.01.2026', 8000,  '', 'فاتورة خدمات يناير',  '']
+    [1, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Opening Balance', '01.01.2026', -15000, '', 'رصيد افتتاحي - ديون مرحلة من 2025', 'سالب = عليه لنا → استحقاق إيراد'],
+    [2, 'XYZ Company (مثال)',    '', 'TRY', 'Active', 'Opening Balance', '01.01.2026', 3000,   '', 'رصيد افتتاحي - دفعات مقدمة مرحلة من 2025', 'موجب = له عندنا → تحصيل إيراد'],
+    [3, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Collection',      '15.01.2026', 5000,  'Bank Transfer', 'سداد فاتورة يناير',  'المبالغ دائماً موجبة'],
+    [4, 'ABC Consulting (مثال)', '', 'TRY', 'Active', 'Invoice',         '01.01.2026', 8000,  '', 'فاتورة خدمات يناير',  'المبالغ دائماً موجبة']
   ];
   sheet.getRange(3, 1, sampleData.length, 11).setValues(sampleData);
   sheet.getRange(3, 1, sampleData.length, 11).setBackground('#fff9c4').setFontStyle('italic');
@@ -1227,13 +1227,18 @@ function createLegacyMigrationSheet() {
     '4. من القائمة:\n' +
     '   DC Consulting → 📥 Import → Migrate Legacy Accounts\n\n' +
     '📌 أنواع الحركات:\n' +
-    '• Opening Balance → رصيد افتتاحي (عادةً بتاريخ 01.01.2026)\n' +
-    '• Collection → تحصيل من عميل (دفعة وصلت)\n' +
-    '• Invoice → فاتورة / استحقاق على العميل\n\n' +
-    '💡 مثال: شركة ABC دفعت 3 دفعات في يناير:\n' +
-    '   سطر 1: ABC | Collection | 05.01.2026 | 2000\n' +
-    '   سطر 2: ABC | Collection | 15.01.2026 | 3000\n' +
-    '   سطر 3: ABC | Collection | 25.01.2026 | 1000\n\n' +
+    '• Opening Balance → رصيد افتتاحي:\n' +
+    '   - سالب = العميل عليه لنا (ديون) → يُسجل كاستحقاق إيراد\n' +
+    '   - موجب = العميل له عندنا (دفعة مقدمة) → يُسجل كتحصيل إيراد\n' +
+    '   - صفر = تسجيل العميل فقط بدون حركة\n' +
+    '• Collection → تحصيل من عميل (المبلغ دائماً موجب)\n' +
+    '• Invoice → فاتورة / استحقاق على العميل (المبلغ دائماً موجب)\n\n' +
+    '📌 المراجع التلقائية (Reference):\n' +
+    '• MIG-2025-OB-xxx = رصيد افتتاحي مدين\n' +
+    '• MIG-2025-CR-xxx = رصيد افتتاحي دائن\n' +
+    '• MIG-2025-COL-xxx = تحصيل مرحّل\n' +
+    '• MIG-2025-INV-xxx = فاتورة مرحّلة\n\n' +
+    '💡 للتدقيق لاحقاً: فلتر بـ MIG-2025 لعرض كل حركات الترحيل\n\n' +
     '⚠️ الشركات غير الموجودة في Clients ستُضاف تلقائياً'
   );
 
@@ -1255,6 +1260,10 @@ function createLegacyMigrationSheet() {
     'I = طريقة الدفع (Cash/Bank Transfer)\n' +
     'J = الوصف / التفاصيل\n' +
     'K = ملاحظات\n\n' +
+    '📌 Opening Balance:\n' +
+    '   • سالب = عليه لنا → استحقاق إيراد (Pending)\n' +
+    '   • موجب = له عندنا → تحصيل إيراد (Paid)\n' +
+    '   • Collection/Invoice → المبلغ دائماً موجب\n\n' +
     '💡 نفس الشركة ممكن تتكرر بعدة سطور\n' +
     '   (سطر لكل دفعة أو فاتورة)\n\n' +
     'الخطوات:\n' +
@@ -1347,10 +1356,13 @@ function importLegacyAccounts() {
       }
     }
 
-    // Amount - col 7 (required > 0 for Collection/Invoice, 0 allowed for Opening Balance)
+    // Amount - col 7
     var amount = parseFloat(row[7]) || 0;
     if (amount === 0 && transType !== 'Opening Balance') {
       rowErrors.push('Amount must be > 0 for ' + transType + ' (المبلغ مطلوب)');
+    }
+    if (amount < 0 && transType !== 'Opening Balance') {
+      rowErrors.push('Amount must be positive for ' + transType + ' — use Transaction Type to set direction (المبلغ يجب أن يكون موجباً - استخدم نوع الحركة لتحديد الاتجاه)');
     }
 
     if (rowErrors.length > 0) {
@@ -1498,35 +1510,72 @@ function importLegacyAccounts() {
 
     if (item.transType === 'Opening Balance') {
       // === Opening Balance ===
-      var obDesc = description || ('Opening Balance - ' + companyName + ' (ترحيل من النظام القديم)');
-      transRow = [
-        transLastRow - 1,                                // A: #
-        item.date,                                       // B: Date
-        sector,                                          // C: Sector
-        'Opening Balance (رصيد افتتاحي)',               // D: Movement Type
-        'Opening Balance (رصيد افتتاحي)',               // E: Category
-        clientCode,                                      // F: Client Code
-        companyName,                                     // G: Client Name
-        '',                                              // H: Item
-        obDesc,                                          // I: Description
-        companyName,                                     // J: Party Name
-        'Client (عميل)',                                 // K: Party Type
-        Math.abs(item.amount),                           // L: Amount
-        currency,                                        // M: Currency
-        exchangeRate,                                    // N: Exchange Rate
-        Math.abs(item.amount) * exchangeRate,            // O: Amount TRY
-        'Accrual (استحقاق)',                             // P: Payment Method
-        '',                                              // Q: Cash/Bank
-        'OB-2026-' + (clientCode || item.serial),        // R: Reference
-        '',                                              // S: Invoice No
-        'Paid (مدفوع)',                                  // T: Status
-        '',                                              // U: Due Date
-        Math.abs(item.amount),                           // V: Paid Amount
-        0,                                               // W: Remaining
-        notes || 'Legacy Migration - Opening Balance',   // X: Notes
-        '',                                              // Y: Attachment
-        'Yes (نعم)'                                      // Z: Show in Statement
-      ];
+      var absAmount = Math.abs(item.amount);
+      var absAmountTRY = absAmount * exchangeRate;
+
+      if (item.amount < 0) {
+        // === NEGATIVE: Client owes us (ديون مستحقة لنا) → Revenue Accrual, Pending ===
+        var obDebitDesc = description || ('رصيد افتتاحي - ديون مرحلة من 2025 - ' + companyName);
+        transRow = [
+          transLastRow - 1,                                // A: #
+          item.date,                                       // B: Date
+          sector,                                          // C: Sector
+          'Revenue Accrual (استحقاق إيراد)',              // D: Movement Type
+          'Opening Balance (رصيد افتتاحي)',               // E: Category
+          clientCode,                                      // F: Client Code
+          companyName,                                     // G: Client Name
+          '',                                              // H: Item
+          obDebitDesc,                                     // I: Description
+          companyName,                                     // J: Party Name
+          'Client (عميل)',                                 // K: Party Type
+          absAmount,                                       // L: Amount (positive)
+          currency,                                        // M: Currency
+          exchangeRate,                                    // N: Exchange Rate
+          absAmountTRY,                                    // O: Amount TRY
+          'Accrual (استحقاق)',                             // P: Payment Method
+          '',                                              // Q: Cash/Bank
+          'MIG-2025-OB-' + (clientCode || item.serial),    // R: Reference
+          '',                                              // S: Invoice No
+          'Pending (معلق)',                                // T: Status
+          '',                                              // U: Due Date
+          0,                                               // V: Paid Amount
+          absAmount,                                       // W: Remaining
+          notes || 'Legacy Migration - Opening Balance (Debit)', // X: Notes
+          '',                                              // Y: Attachment
+          'Yes (نعم)'                                      // Z: Show in Statement
+        ];
+      } else {
+        // === POSITIVE: We owe client (دفعات مقدمة للعميل) → Revenue Collection, Paid ===
+        var obCreditDesc = description || ('رصيد افتتاحي - دفعات مقدمة مرحلة من 2025 - ' + companyName);
+        transRow = [
+          transLastRow - 1,                                // A: #
+          item.date,                                       // B: Date
+          sector,                                          // C: Sector
+          'Revenue Collection (تحصيل إيراد)',             // D: Movement Type
+          'Opening Balance (رصيد افتتاحي)',               // E: Category
+          clientCode,                                      // F: Client Code
+          companyName,                                     // G: Client Name
+          '',                                              // H: Item
+          obCreditDesc,                                    // I: Description
+          companyName,                                     // J: Party Name
+          'Client (عميل)',                                 // K: Party Type
+          absAmount,                                       // L: Amount (positive)
+          currency,                                        // M: Currency
+          exchangeRate,                                    // N: Exchange Rate
+          absAmountTRY,                                    // O: Amount TRY
+          payMethod,                                       // P: Payment Method
+          cashBank,                                        // Q: Cash/Bank
+          'MIG-2025-CR-' + (clientCode || item.serial),    // R: Reference
+          '',                                              // S: Invoice No
+          'Paid (مدفوع)',                                  // T: Status
+          '',                                              // U: Due Date
+          absAmount,                                       // V: Paid Amount
+          0,                                               // W: Remaining
+          notes || 'Legacy Migration - Opening Balance (Credit)', // X: Notes
+          '',                                              // Y: Attachment
+          'Yes (نعم)'                                      // Z: Show in Statement
+        ];
+      }
 
     } else if (item.transType === 'Collection') {
       // === Collection (تحصيل من عميل) ===
@@ -1549,7 +1598,7 @@ function importLegacyAccounts() {
         amountTRY,                                       // O: Amount TRY
         payMethod,                                       // P: Payment Method
         cashBank,                                        // Q: Cash/Bank
-        'MIG-COL-' + (clientCode || item.serial) + '-' + totalImported, // R: Reference
+        'MIG-2025-COL-' + (clientCode || item.serial) + '-' + totalImported, // R: Reference
         '',                                              // S: Invoice No
         'Paid (مدفوع)',                                  // T: Status
         '',                                              // U: Due Date
@@ -1581,7 +1630,7 @@ function importLegacyAccounts() {
         amountTRY,                                       // O: Amount TRY
         'Accrual (استحقاق)',                             // P: Payment Method
         '',                                              // Q: Cash/Bank
-        'MIG-INV-' + (clientCode || item.serial) + '-' + totalImported, // R: Reference
+        'MIG-2025-INV-' + (clientCode || item.serial) + '-' + totalImported, // R: Reference
         '',                                              // S: Invoice No
         'Pending (معلق)',                                // T: Status
         '',                                              // U: Due Date
