@@ -135,8 +135,8 @@ function refreshDashboard() {
     
     for (let i = 1; i < transData.length; i++) {
       const date = transData[i][1]; // Date
-      const movementType = transData[i][2]; // Movement Type
-      const amount = parseFloat(transData[i][13]) || 0; // Amount TRY
+      const movementType = transData[i][3]; // Movement Type
+      const amount = parseFloat(transData[i][14]) || 0; // Amount TRY
       
       if (!date) continue;
       
@@ -194,13 +194,15 @@ function refreshDashboard() {
   // ===== Client Statistics =====
   const clients = getActiveClients();
   const totalClients = clients.length;
-  const clientsWithFee = clients.filter(c => c.monthlyFee > 0).length;
-  const totalMonthlyRevenue = clients.reduce((sum, c) => sum + (c.monthlyFee || 0), 0);
-  
+  const monthlyActivities = getClientsWithMonthlyFees();
+  const clientsWithFee = [...new Set(monthlyActivities.map(a => a.clientCode))].length;
+  const totalMonthlyRevenue = monthlyActivities.reduce((sum, a) => sum + (a.monthlyFee || 0), 0);
+
   const clientStats = [
     ['Total Active Clients', totalClients],
     ['Clients with Monthly Fee', clientsWithFee],
-    ['Total Monthly Revenue (TRY)', totalMonthlyRevenue]
+    ['Monthly Subscriptions', monthlyActivities.length],
+    ['Total Monthly Revenue', totalMonthlyRevenue]
   ];
   
   sheet.getRange(21, 1, clientStats.length, 2).setValues(clientStats);
@@ -216,9 +218,9 @@ function refreshDashboard() {
     let overdueAmount = 0;
     
     for (let i = 1; i < transData.length; i++) {
-      const status = transData[i][18];
-      const dueDate = transData[i][19];
-      const amount = parseFloat(transData[i][13]) || 0;
+      const status = transData[i][19];
+      const dueDate = transData[i][20];
+      const amount = parseFloat(transData[i][14]) || 0;
       
       if (status && status.includes('Pending') && dueDate) {
         const due = new Date(dueDate);
@@ -300,17 +302,17 @@ function generateClientStatement(clientCode, clientName) {
   const clientTrans = [];
 
   for (let i = 1; i < transData.length; i++) {
-    const code = transData[i][4]; // Client Code
-    const name = transData[i][5]; // Client Name
-    const showInStatement = transData[i][24]; // Column Y
+    const code = transData[i][5]; // Client Code
+    const name = transData[i][6]; // Client Name
+    const showInStatement = transData[i][25]; // Column Z
 
     if ((code === clientCode || name === clientName) &&
         (!showInStatement || showInStatement.includes('Yes'))) {
 
-      const movementType = transData[i][2] || '';
-      const amount = parseFloat(transData[i][10]) || 0;
-      const item = transData[i][6] || '';
-      const description = transData[i][7] || '';
+      const movementType = transData[i][3] || '';
+      const amount = parseFloat(transData[i][11]) || 0;
+      const item = transData[i][7] || '';
+      const description = transData[i][8] || '';
 
       // تحديد دائن/مدين بناءً على نوع الحركة
       let credit = 0; // له (دائن) - ما يستحق على العميل
@@ -722,12 +724,12 @@ function generateClientProfitability(clientCode, clientName) {
   let totalDirectExpenses = 0;
 
   for (let i = 1; i < transData.length; i++) {
-    const code = transData[i][4];
-    const name = transData[i][5];
-    const movementType = transData[i][2] || '';
-    const item = transData[i][6] || '';
-    const description = transData[i][7] || '';
-    const amount = parseFloat(transData[i][13]) || 0; // Amount TRY
+    const code = transData[i][5];
+    const name = transData[i][6];
+    const movementType = transData[i][3] || '';
+    const item = transData[i][7] || '';
+    const description = transData[i][8] || '';
+    const amount = parseFloat(transData[i][14]) || 0; // Amount TRY
     const date = transData[i][1];
 
     if (code === clientCode || name === clientName) {
@@ -931,35 +933,52 @@ function generateClientsReport() {
     return;
   }
   
-  // Calculate summary
+  // Calculate summary from Client Sector
   const totalClients = clients.length;
-  const totalMonthlyFees = clients.reduce((sum, c) => sum + (c.monthlyFee || 0), 0);
-  const avgFee = totalMonthlyFees / totalClients;
-  
+  const monthlyActs = getClientsWithMonthlyFees();
+  const totalMonthlyFees = monthlyActs.reduce((sum, a) => sum + (a.monthlyFee || 0), 0);
+  const avgFee = monthlyActs.length > 0 ? totalMonthlyFees / monthlyActs.length : 0;
+
   // Group by currency
   const byCurrency = {};
-  clients.forEach(c => {
-    const curr = c.feeCurrency || 'TRY';
+  monthlyActs.forEach(a => {
+    const curr = a.currency || 'TRY';
     if (!byCurrency[curr]) byCurrency[curr] = { count: 0, total: 0 };
     byCurrency[curr].count++;
-    byCurrency[curr].total += c.monthlyFee || 0;
+    byCurrency[curr].total += a.monthlyFee || 0;
   });
-  
+
   let currencyBreakdown = '';
   Object.keys(byCurrency).forEach(curr => {
-    currencyBreakdown += curr + ': ' + byCurrency[curr].count + ' clients, ' + 
+    currencyBreakdown += curr + ': ' + byCurrency[curr].count + ' subscriptions, ' +
                          formatCurrency(byCurrency[curr].total, curr) + '\n';
   });
-  
-  const report = 
+
+  // Group by activity
+  const byActivity = {};
+  monthlyActs.forEach(a => {
+    if (!byActivity[a.activity]) byActivity[a.activity] = { count: 0, total: 0 };
+    byActivity[a.activity].count++;
+    byActivity[a.activity].total += a.monthlyFee || 0;
+  });
+
+  let activityBreakdown = '';
+  Object.keys(byActivity).forEach(act => {
+    activityBreakdown += act + ': ' + byActivity[act].count + ' clients, ' +
+                         formatCurrency(byActivity[act].total, 'TRY') + '\n';
+  });
+
+  const report =
     '📋 CLIENTS REPORT\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Total Active Clients: ' + totalClients + '\n' +
+    'Monthly Subscriptions: ' + monthlyActs.length + '\n' +
     'Total Monthly Revenue: ' + formatCurrency(totalMonthlyFees, 'TRY') + '\n' +
-    'Average Fee/Client: ' + formatCurrency(avgFee, 'TRY') + '\n' +
+    'Average Fee/Subscription: ' + formatCurrency(avgFee, 'TRY') + '\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    'By Activity:\n' + activityBreakdown + '\n' +
     'By Currency:\n' + currencyBreakdown;
-  
+
   ui.alert(report);
 }
 
@@ -979,12 +998,12 @@ function generateOverdueReport() {
   const overdueList = [];
   
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][18];
-    const dueDate = data[i][19];
-    const clientName = data[i][5];
-    const amount = data[i][10];
-    const currency = data[i][11];
-    const invoiceNo = data[i][17];
+    const status = data[i][19];
+    const dueDate = data[i][20];
+    const clientName = data[i][6];
+    const amount = data[i][11];
+    const currency = data[i][12];
+    const invoiceNo = data[i][18];
     
     if (status && status.includes('Pending') && dueDate) {
       const due = new Date(dueDate);
