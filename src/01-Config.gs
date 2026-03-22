@@ -153,14 +153,17 @@ function onOpen() {
       .addItem('📋 Create Import Sheet (إنشاء شيت الاستيراد)', 'createImportSheet')
       .addItem('📋 Create Opening Balances Sheet', 'createOpeningBalancesImportSheet')
       .addItem('📋 Create Legacy Migration Sheet (ترحيل حسابات قديمة)', 'createLegacyMigrationSheet')
+      .addItem('🏦 Create Bank Balances Migration Sheet (ترحيل أرصدة البنوك)', 'createBankBalanceMigrationSheet')
       .addSeparator()
       .addItem('📥 Import Transactions from Sheet', 'importTransactionsFromSheet')
       .addItem('📥 Import Opening Balances', 'importOpeningBalances')
       .addItem('📥 Migrate Legacy Accounts (ترحيل الحسابات)', 'importLegacyAccounts')
+      .addItem('🏦 Migrate Bank Balances (ترحيل أرصدة البنوك)', 'migrateBankOpeningBalances')
       .addSeparator()
       .addItem('🗑️ Clear Import Sheet', 'clearImportSheet')
       .addItem('🗑️ Clear Opening Balances Sheet', 'clearOpeningBalancesSheet')
-      .addItem('🗑️ Clear Legacy Migration Sheet', 'clearLegacyMigrationSheet'))
+      .addItem('🗑️ Clear Legacy Migration Sheet', 'clearLegacyMigrationSheet')
+      .addItem('🗑️ Clear Bank Balances Migration Sheet', 'clearBankBalanceMigrationSheet'))
 
     // Help
     .addSeparator()

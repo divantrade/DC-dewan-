@@ -1010,4 +1010,297 @@ function showBankAccountsSummary() {
   ui.alert(summary);
 }
 
+// ==================== 10. BANK OPENING BALANCES MIGRATION ====================
+
+/**
+ * إنشاء شيت لترحيل أرصدة البنوك الافتتاحية
+ * يقرأ البنوك الموجودة تلقائياً ويعرضها للمستخدم لملء الأرصدة
+ */
+function createBankBalanceMigrationSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheetName = '_Migrate Bank Balances';
+
+  // Check if sheet already exists
+  var existing = ss.getSheetByName(sheetName);
+  if (existing) {
+    var overwrite = ui.alert(
+      '⚠️ شيت الترحيل موجود',
+      'شيت "' + sheetName + '" موجود بالفعل.\n\nهل تريد إعادة إنشائه؟ (البيانات الحالية ستُحذف)',
+      ui.ButtonSet.YES_NO
+    );
+    if (overwrite !== ui.Button.YES) {
+      ss.setActiveSheet(existing);
+      return;
+    }
+    ss.deleteSheet(existing);
+  }
+
+  var sheet = ss.insertSheet(sheetName);
+  sheet.setTabColor('#0d47a1');
+
+  // Headers
+  var headers = [
+    '#',
+    'Account Name (اسم الحساب)',
+    'Bank Name (البنك)',
+    'Currency (العملة)',
+    'IBAN',
+    'Current Opening Balance (الرصيد الحالي)',
+    'New Opening Balance (الرصيد الجديد)',
+    'Opening Date (تاريخ الافتتاح)',
+    'Status (الحالة)',
+    'Notes (ملاحظات)'
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground('#0d47a1')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold');
+
+  // Read existing bank accounts
+  var bankSheet = ss.getSheetByName('Bank Accounts');
+  if (!bankSheet || bankSheet.getLastRow() < 2) {
+    ui.alert('⚠️ لا توجد حسابات بنكية!\n\nأنشئ حسابات البنوك أولاً من:\nDC Consulting → 🏦 Cash & Bank → Add Bank Account');
+    ss.deleteSheet(sheet);
+    return;
+  }
+
+  var bankData = bankSheet.getRange(2, 1, bankSheet.getLastRow() - 1, 13).getValues();
+  var rows = [];
+  var rowNum = 0;
+
+  for (var i = 0; i < bankData.length; i++) {
+    var accountName = bankData[i][1];
+    var bankName = bankData[i][2];
+    var currency = bankData[i][3];
+    var iban = bankData[i][4] || '';
+    var currentBalance = bankData[i][8] || 0;
+    var status = bankData[i][10] || 'Active';
+
+    if (!accountName) continue;
+    rowNum++;
+
+    // Get actual balance from the bank sheet if it exists
+    var actualBalance = getCashBankBalance(accountName);
+
+    rows.push([
+      rowNum,
+      accountName,
+      bankName,
+      currency,
+      iban,
+      actualBalance,
+      '',         // New balance - user fills this
+      '01.01.2026', // Default opening date
+      status,
+      ''
+    ]);
+  }
+
+  if (rows.length === 0) {
+    ui.alert('⚠️ لا توجد حسابات بنكية!');
+    ss.deleteSheet(sheet);
+    return;
+  }
+
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+
+  // Formatting
+  var widths = [40, 200, 150, 80, 260, 150, 150, 120, 80, 200];
+  widths.forEach(function(w, i) { sheet.setColumnWidth(i + 1, w); });
+
+  // Lock read-only columns (1-6, 9) with gray background
+  var readOnlyCols = [1, 2, 3, 4, 5, 6, 9];
+  for (var c = 0; c < readOnlyCols.length; c++) {
+    sheet.getRange(2, readOnlyCols[c], rows.length, 1).setBackground('#f5f5f5');
+  }
+
+  // Highlight the editable column (New Opening Balance)
+  sheet.getRange(2, 7, rows.length, 1)
+    .setBackground('#e8f5e9')
+    .setNumberFormat('#,##0.00')
+    .setFontWeight('bold');
+
+  // Format dates
+  sheet.getRange(2, 8, rows.length, 1)
+    .setBackground('#e8f5e9')
+    .setNumberFormat('dd.mm.yyyy');
+
+  // Format current balance
+  sheet.getRange(2, 6, rows.length, 1).setNumberFormat('#,##0.00');
+
+  sheet.setFrozenRows(1);
+
+  // Instructions note
+  sheet.getRange('A1').setNote(
+    '🏦 ترحيل أرصدة البنوك الافتتاحية\n\n' +
+    '1. العمود F يعرض الرصيد الحالي في النظام (للمقارنة فقط)\n' +
+    '2. أدخل الرصيد الافتتاحي الجديد في العمود G (الأخضر)\n' +
+    '3. عدّل التاريخ في العمود H إذا لزم الأمر\n' +
+    '4. اترك العمود G فارغاً للحسابات التي لا تريد تحديثها\n' +
+    '5. من القائمة:\n' +
+    '   DC Consulting → 📥 Import → Migrate Bank Balances\n\n' +
+    '⚠️ هذا سيستبدل الرصيد الافتتاحي الحالي في شيت كل بنك'
+  );
+
+  ss.setActiveSheet(sheet);
+
+  ui.alert(
+    '✅ شيت ترحيل أرصدة البنوك جاهز!\n\n' +
+    'تم إدراج ' + rows.length + ' حساب بنكي.\n\n' +
+    '📝 الخطوات:\n' +
+    '1. أدخل الرصيد الافتتاحي في العمود G (الأخضر)\n' +
+    '   اترك فارغاً للحسابات اللي ما تريد تحديثها\n' +
+    '2. من القائمة:\n' +
+    '   DC Consulting → 📥 Import → Migrate Bank Balances'
+  );
+}
+
+/**
+ * ترحيل أرصدة البنوك الافتتاحية من شيت الترحيل
+ * يحدّث: 1) شيت Bank Accounts  2) السطر الأول في شيت كل بنك
+ */
+function migrateBankOpeningBalances() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheetName = '_Migrate Bank Balances';
+
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) {
+    ui.alert('⚠️ شيت الترحيل غير موجود!\n\nأنشئه أولاً من:\nDC Consulting → 📥 Import → Create Bank Balances Migration Sheet');
+    return;
+  }
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+
+  // Count rows that have a new balance
+  var toUpdate = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var accountName = row[1];
+    var newBalance = row[6];
+    var openingDate = row[7];
+
+    if (!accountName) continue;
+    if (newBalance === '' || newBalance === null || newBalance === undefined) continue;
+
+    var parsedBalance = parseFloat(newBalance);
+    if (isNaN(parsedBalance)) continue;
+
+    toUpdate.push({
+      rowIndex: i,
+      accountName: accountName,
+      bankName: row[2],
+      currency: row[3],
+      newBalance: parsedBalance,
+      openingDate: openingDate || new Date('2026-01-01')
+    });
+  }
+
+  if (toUpdate.length === 0) {
+    ui.alert('⚠️ لا توجد أرصدة جديدة لتحديثها!\n\nأدخل الأرصدة في العمود G (الأخضر) أولاً.');
+    return;
+  }
+
+  // Build confirmation message
+  var confirmMsg = 'سيتم تحديث أرصدة ' + toUpdate.length + ' حساب بنكي:\n\n';
+  for (var j = 0; j < toUpdate.length; j++) {
+    var item = toUpdate[j];
+    confirmMsg += (j + 1) + '. ' + item.accountName + ' → ' + formatCurrency(item.newBalance, item.currency) + '\n';
+  }
+  confirmMsg += '\n⚠️ هذا سيستبدل الأرصدة الافتتاحية الحالية.\nContinue?';
+
+  var response = ui.alert('🏦 تأكيد ترحيل أرصدة البنوك', confirmMsg, ui.ButtonSet.YES_NO);
+  if (response !== ui.Button.YES) return;
+
+  // Process updates
+  var bankSheet = ss.getSheetByName('Bank Accounts');
+  var bankData = bankSheet ? bankSheet.getRange(2, 1, bankSheet.getLastRow() - 1, 13).getValues() : [];
+
+  var updated = 0;
+  var errors = [];
+
+  for (var k = 0; k < toUpdate.length; k++) {
+    var account = toUpdate[k];
+
+    try {
+      // 1. Update Bank Accounts database sheet
+      if (bankSheet) {
+        for (var b = 0; b < bankData.length; b++) {
+          if (bankData[b][1] === account.accountName) {
+            bankSheet.getRange(b + 2, 9).setValue(account.newBalance);  // Opening Balance col I
+            bankSheet.getRange(b + 2, 10).setValue(account.openingDate); // Opening Date col J
+            break;
+          }
+        }
+      }
+
+      // 2. Update the individual bank sheet (row 4 = opening balance row)
+      var bankIndividualSheet = ss.getSheetByName(account.accountName);
+      if (bankIndividualSheet) {
+        // Update Opening Balance row
+        var dateValue = account.openingDate;
+        if (typeof dateValue === 'string') {
+          var parts = dateValue.split('.');
+          if (parts.length === 3) {
+            dateValue = new Date(parts[2], parts[1] - 1, parts[0]);
+          }
+        }
+        bankIndividualSheet.getRange('A4').setValue(dateValue).setNumberFormat('dd.mm.yyyy');
+        bankIndividualSheet.getRange('B4').setValue('Opening Balance (رصيد افتتاحي) - MIG-2025');
+        bankIndividualSheet.getRange('C4').setValue('MIG-2025-BNK-' + (account.accountName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10)));
+        bankIndividualSheet.getRange('F4').setValue(account.newBalance).setNumberFormat('#,##0.00');
+        bankIndividualSheet.getRange('G4').setValue('IN');
+
+        // Mark row in migration sheet as done
+        sheet.getRange(account.rowIndex + 2, 10).setValue('✅ Updated');
+        sheet.getRange(account.rowIndex + 2, 7, 1, 1).setBackground('#c8e6c9');
+
+        updated++;
+      } else {
+        errors.push(account.accountName + ' — شيت البنك غير موجود (أنشئه أولاً)');
+      }
+    } catch (e) {
+      errors.push(account.accountName + ' — ' + e.message);
+    }
+  }
+
+  // Summary
+  var summary = '✅ تم ترحيل أرصدة البنوك!\n\n' +
+    '📥 Updated: ' + updated + ' / ' + toUpdate.length + '\n';
+
+  if (errors.length > 0) {
+    summary += '\n❌ Errors:\n';
+    for (var e = 0; e < errors.length; e++) {
+      summary += '• ' + errors[e] + '\n';
+    }
+  }
+
+  summary += '\n💡 لمراجعة الأرصدة:\nDC Consulting → 🏦 Cash & Bank → Bank Summary';
+
+  ui.alert(summary);
+}
+
+/**
+ * مسح شيت ترحيل أرصدة البنوك
+ */
+function clearBankBalanceMigrationSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getSheetByName('_Migrate Bank Balances');
+
+  if (!sheet) {
+    ui.alert('⚠️ شيت الترحيل غير موجود!');
+    return;
+  }
+
+  var response = ui.alert('🗑️ Delete Bank Balances Migration Sheet?', 'هل تريد حذف شيت ترحيل أرصدة البنوك؟', ui.ButtonSet.YES_NO);
+  if (response !== ui.Button.YES) return;
+
+  ss.deleteSheet(sheet);
+  ui.alert('✅ تم الحذف!');
+}
+
 // ==================== END OF PART 4 ====================
